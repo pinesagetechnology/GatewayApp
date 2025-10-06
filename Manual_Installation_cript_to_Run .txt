@@ -1,0 +1,14 @@
+sudo ./FileMonitorWorkerService_MainInstaller.sh --data-path "/var/filemonitor" --source-path "/home/alirk/workspace/FileMonitorWorkerService/FileMonitorWorkerService"
+  
+sudo ./APIMonitorWorkerService_MainInstaller.sh --data-path "/var/apimonitor" --source-path "/home/alirk/workspace/APIMonitorWorkerService/APIMonitorWorkerService" 
+  
+
+sudo bash MonitoringServiceAPI_MainInstaller.sh --source-path ../MonitoringServiceAPI
+
+sudo ./fix-database-permissions_v2.sh --apimonitor-data /var/apimonitor --filemonitor-data /var/filemonitor
+
+# Run it with your folder path
+sudo bash fix-monitored-folder-permissions.sh --folder /home/alirk/workspace/test1
+
+# Or with verbose output to see what's happening
+sudo bash fix-monitored-folder-permissions.sh --folder /home/alirk/workspace/test1 --verbose
