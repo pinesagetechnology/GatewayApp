@@ -304,6 +304,9 @@ configure_application() {
     warn "appsettings.json not found, creating basic configuration"
     cat > "$appsettings" <<EOF
 {
+  "ScriptPaths": {
+    "PermissionScript": "scripts/fix-monitored-folder-permissions.sh"
+  },
   "ConnectionStrings": {
     "FileMonitorConnection": "Data Source=/var/filemonitor/database/filemonitor.db",
     "ApiMonitorConnection": "Data Source=/var/apimonitor/database/apimonitor.db"
