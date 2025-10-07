@@ -494,7 +494,7 @@ install_monitoringapi() {
     info "It uses FileMonitor DB: $FILEMONITOR_DATA"
     info "It uses APIMonitor DB: $APIMONITOR_DATA"
     
-    local installer="$MONITORINGAPI_SOURCE/scripts/MonitoringServiceAPI_MainInstaller.sh"
+    local installer="$MONITORINGAPI_SOURCE/../scripts/MonitoringServiceAPI_MainInstaller.sh"
     if [ ! -f "$installer" ]; then
         installer="$SCRIPT_DIR/MonitoringServiceAPI_MainInstaller.sh"
     fi
