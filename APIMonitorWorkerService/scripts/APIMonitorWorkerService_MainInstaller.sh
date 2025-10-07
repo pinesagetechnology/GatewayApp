@@ -7,7 +7,6 @@ set -e
 INSTALL_PATH="/opt/apimonitor"
 DATA_PATH=""
 SOURCE_PATH=""
-SKIP_DOTNET=false
 SKIP_VALIDATION=false
 VERBOSE=false
 INTERACTIVE=true
@@ -34,10 +33,6 @@ while [[ $# -gt 0 ]]; do
             SOURCE_PATH="$2"
             shift 2
             ;;
-        --skip-dotnet)
-            SKIP_DOTNET=true
-            shift
-            ;;
         --skip-validation)
             SKIP_VALIDATION=true
             shift
@@ -58,11 +53,12 @@ while [[ $# -gt 0 ]]; do
             echo "  --install-path PATH    Installation directory (default: /opt/apimonitor)"
             echo "  --data-path PATH       Data directory (will prompt if not specified)"
             echo "  --source-path PATH     Path to published application files"
-            echo "  --skip-dotnet         Skip .NET installation"
             echo "  --skip-validation     Skip post-installation validation"
             echo "  --verbose             Verbose output"
             echo "  --non-interactive     Skip user prompts (requires --data-path)"
             echo "  -h, --help            Show this help"
+            echo ""
+            echo "Note: .NET must be installed separately before running this script"
             exit 0
             ;;
         *)
@@ -73,7 +69,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 log_info() { echo -e "${GREEN}✓${NC} $1"; }
-log_warn() { echo -e "${YELLOW}⚠${NC} $1"; }
+log_warn() { echo -e "${YELLOW}⚠ ${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1"; }
 log_step() { echo -e "${BLUE}==>${NC} $1"; }
 
@@ -149,6 +145,25 @@ prompt_data_path() {
     done
 }
 
+# Function to verify .NET is installed
+verify_dotnet() {
+    log_step "Verifying .NET installation..."
+    
+    if ! command -v dotnet &> /dev/null; then
+        log_error ".NET is not installed"
+        log_error "Please install .NET 8 runtime/SDK before running this script"
+        exit 1
+    fi
+
+    if ! dotnet --list-runtimes | grep -q "Microsoft.AspNetCore.App 8"; then
+        log_error ".NET 8 runtime not found"
+        log_error "Please install .NET 8 runtime/SDK before running this script"
+        exit 1
+    fi
+
+    log_info ".NET 8 is installed"
+}
+
 echo -e "${GREEN}=== APIMonitorWorkerService Linux Installation ===${NC}"
 echo "This script will install APIMonitorWorkerService on your Linux system"
 echo ""
@@ -163,23 +178,23 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Verify .NET is installed
+verify_dotnet
+
 # Prompt for data path if not specified
 prompt_data_path
 echo "  Data Path: $DATA_PATH"
 echo ""
 
-# Step 1: Run prerequisites installation
+# Step 1: Run prerequisites installation (without .NET)
 log_step "Step 1: Installing prerequisites and setting up environment"
 # Normalize potential CRLF in APIMonitorWorkerService_Linux_Installation.sh to avoid shebang issues
 if [ -f "APIMonitorWorkerService_Linux_Installation.sh" ]; then
     sed -i 's/\r$//' APIMonitorWorkerService_Linux_Installation.sh || true
     chmod +x APIMonitorWorkerService_Linux_Installation.sh || true
 fi
-if [ "$SKIP_DOTNET" = true ]; then
-    bash APIMonitorWorkerService_Linux_Installation.sh --install-path "$INSTALL_PATH" --data-path "$DATA_PATH" --skip-dotnet
-else
-    bash APIMonitorWorkerService_Linux_Installation.sh --install-path "$INSTALL_PATH" --data-path "$DATA_PATH"
-fi
+
+bash APIMonitorWorkerService_Linux_Installation.sh --install-path "$INSTALL_PATH" --data-path "$DATA_PATH"
 
 if [ $? -ne 0 ]; then
     log_error "Prerequisites installation failed"
@@ -232,26 +247,15 @@ if [ -n "$SOURCE_PATH" ]; then
             exit 1
         fi
 
-        # Ensure dotnet CLI and SDK are available
+        # Ensure dotnet CLI is available (SDK should already be installed)
         if ! command -v dotnet >/dev/null 2>&1; then
-            log_error "dotnet CLI not found. Install .NET or run with --skip-dotnet after manual install."
+            log_error "dotnet CLI not found. Please install .NET 8 SDK."
             exit 1
         fi
+        
         if ! dotnet --list-sdks 2>/dev/null | grep -q "^8\."; then
-            log_step "No .NET 8 SDK detected. Installing SDK via dotnet-install.sh"
-            if command -v curl >/dev/null 2>&1; then
-                curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
-            else
-                wget -q https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh
-            fi
-            chmod +x /tmp/dotnet-install.sh
-            /tmp/dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet
-            ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet || true
-            if ! dotnet --list-sdks 2>/dev/null | grep -q "^8\."; then
-                log_error ".NET 8 SDK installation failed. Cannot publish."
-                exit 1
-            fi
-            log_info ".NET 8 SDK installed"
+            log_error ".NET 8 SDK not found. Please install .NET 8 SDK to build the project."
+            exit 1
         fi
 
         PUBLISH_DIR="$DATA_PATH/temp/publish-$(date +%s)"
@@ -346,7 +350,7 @@ NC='\033[0m'
 
 log_success() { echo -e "${GREEN}✓${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1"; }
-log_warn() { echo -e "${YELLOW}⚠${NC} $1"; }
+log_warn() { echo -e "${YELLOW}⚠ ${NC} $1"; }
 
 errors=0
 

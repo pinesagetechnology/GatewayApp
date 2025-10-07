@@ -10,7 +10,6 @@ DATA_PATH=""
 SERVICE_NAME="monitoringapi"
 SERVICE_USER="monitoringapi"
 API_PORT=5000
-SKIP_DOTNET=false
 VERBOSE=false
 INTERACTIVE=true
 DOWNLOAD_URL=""
@@ -29,7 +28,7 @@ NC='\033[0m'
 
 # Logging functions
 log() { echo -e "${GREEN}✓${NC} $1"; }
-warn() { echo -e "${YELLOW}⚠${NC} $1"; }
+warn() { echo -e "${YELLOW}⚠ ${NC} $1"; }
 err() { echo -e "${RED}✗${NC} $1"; }
 step() { echo -e "${BLUE}==>${NC} $1"; }
 info() { echo -e "${BLUE}ℹ${NC} $1"; }
@@ -43,7 +42,6 @@ while [[ $# -gt 0 ]]; do
     --download-url) DOWNLOAD_URL="$2"; shift 2;;
     --source-path) SOURCE_PATH="$2"; BUILD_FROM_SOURCE=true; shift 2;;
     --release-version) RELEASE_VERSION="$2"; shift 2;;
-    --skip-dotnet) SKIP_DOTNET=true; shift;;
     --skip-build) SKIP_BUILD=true; shift;;
     --clean-install) CLEAN_INSTALL=true; shift;;
     --verbose) VERBOSE=true; shift;;
@@ -65,13 +63,14 @@ while [[ $# -gt 0 ]]; do
       echo ""
       echo "Build Options:"
       echo "  --skip-build             Skip building if source provided"
-      echo "  --skip-dotnet            Skip .NET runtime installation"
       echo "  --clean-install          Remove existing installation first"
       echo ""
       echo "General Options:"
       echo "  --verbose                Enable verbose output"
       echo "  --non-interactive        No prompts (requires --data-path)"
       echo "  -h, --help              Show this help"
+      echo ""
+      echo "Note: .NET must be installed separately before running this script"
       echo ""
       echo "Examples:"
       echo "  $0 --source-path /path/to/source --data-path /var/monitoringapi"
@@ -121,6 +120,25 @@ validate_paths() {
   log "Directory validation completed"
 }
 
+# Function to verify .NET is installed
+verify_dotnet() {
+  step "Verifying .NET installation..."
+  
+  if ! command -v dotnet >/dev/null 2>&1; then
+    err ".NET is not installed"
+    err "Please install .NET 8 runtime/SDK before running this script"
+    exit 1
+  fi
+
+  if ! dotnet --list-runtimes | grep -q "Microsoft.AspNetCore.App 8"; then
+    err ".NET 8 runtime not found"
+    err "Please install .NET 8 runtime/SDK before running this script"
+    exit 1
+  fi
+
+  log ".NET 8 is installed"
+}
+
 # Installation functions
 install_prerequisites() {
   step "Installing system prerequisites..."
@@ -144,41 +162,6 @@ install_prerequisites() {
   esac
   
   log "Prerequisites installed"
-}
-
-check_dotnet() {
-  command -v dotnet >/dev/null 2>&1 && dotnet --list-runtimes | grep -q "Microsoft.AspNetCore.App 8"
-}
-
-install_dotnet() {
-  step "Installing .NET 8 runtime..."
-  
-  case $DISTRO in
-    ubuntu|debian)
-      wget -q https://packages.microsoft.com/config/$DISTRO/$VERSION/packages-microsoft-prod.deb -O /tmp/msprod.deb
-      dpkg -i /tmp/msprod.deb && rm /tmp/msprod.deb
-      apt-get update && apt-get install -y aspnetcore-runtime-8.0
-      ;;
-    centos|rhel|fedora)
-      rpm -Uvh https://packages.microsoft.com/config/$DISTRO/$VERSION/packages-microsoft-prod.rpm
-      if command -v dnf >/dev/null 2>&1; then
-        dnf install -y aspnetcore-runtime-8.0
-      else
-        yum install -y aspnetcore-runtime-8.0
-      fi
-      ;;
-    *)
-      warn "Falling back to dotnet-install.sh for $DISTRO"
-      curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh || \
-      wget -q https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh
-      chmod +x /tmp/dotnet-install.sh
-      /tmp/dotnet-install.sh --runtime aspnetcore --channel 8.0 --install-dir /usr/share/dotnet
-      ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet || true
-      ;;
-  esac
-  
-  check_dotnet || { err ".NET 8 runtime installation failed"; exit 1; }
-  log ".NET 8 runtime installed successfully"
 }
 
 create_user_and_dirs() {
@@ -253,6 +236,17 @@ build_from_source() {
   
   if [ ! -f "$SOURCE_PATH/MonitoringServiceAPI.csproj" ]; then
     err "Source path does not contain MonitoringServiceAPI.csproj: $SOURCE_PATH"
+    exit 1
+  fi
+  
+  # Verify .NET SDK is available for building
+  if ! command -v dotnet >/dev/null 2>&1; then
+    err "dotnet CLI not found. Please install .NET 8 SDK."
+    exit 1
+  fi
+  
+  if ! dotnet --list-sdks 2>/dev/null | grep -q "^8\."; then
+    err ".NET 8 SDK not found. Please install .NET 8 SDK to build the project."
     exit 1
   fi
   
@@ -396,17 +390,12 @@ server {
 }
 EOF
   
-  # Enable site
-  ln -sfn "/etc/nginx/sites-available/$SERVICE_NAME" "/etc/nginx/sites-enabled/$SERVICE_NAME"
+  # Configuration file created but NOT enabled
+  # To enable: sudo ln -s /etc/nginx/sites-available/$SERVICE_NAME /etc/nginx/sites-enabled/$SERVICE_NAME
+  # Then reload: sudo systemctl reload nginx
   
-  # Remove default site if it exists
-  rm -f /etc/nginx/sites-enabled/default
-  
-  # Test configuration
-  nginx -t && systemctl reload nginx
-  systemctl enable nginx || true
-  
-  log "Nginx configured successfully"
+  log "Nginx configuration created at /etc/nginx/sites-available/$SERVICE_NAME"
+  log "Note: Site is NOT enabled. Enable manually if needed."
 }
 
 create_uninstaller() {
@@ -564,6 +553,7 @@ main() {
   # Initial checks
   check_root
   detect_distro
+  verify_dotnet
   prompt_data_path
   validate_paths
   
@@ -581,15 +571,6 @@ main() {
   
   # Installation steps
   install_prerequisites
-  
-  if [ "$SKIP_DOTNET" = false ]; then
-    if ! check_dotnet; then
-      install_dotnet
-    else
-      log ".NET 8 runtime already installed"
-    fi
-  fi
-  
   create_user_and_dirs
   clean_existing_installation
   
