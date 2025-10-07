@@ -188,13 +188,17 @@ echo ""
 
 # Step 1: Run prerequisites installation (without .NET)
 log_step "Step 1: Installing prerequisites and setting up environment"
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Normalize potential CRLF in APIMonitorWorkerService_Linux_Installation.sh to avoid shebang issues
-if [ -f "APIMonitorWorkerService_Linux_Installation.sh" ]; then
-    sed -i 's/\r$//' APIMonitorWorkerService_Linux_Installation.sh || true
-    chmod +x APIMonitorWorkerService_Linux_Installation.sh || true
+if [ -f "$SCRIPT_DIR/APIMonitorWorkerService_Linux_Installation.sh" ]; then
+    sed -i 's/\r$//' "$SCRIPT_DIR/APIMonitorWorkerService_Linux_Installation.sh" || true
+    chmod +x "$SCRIPT_DIR/APIMonitorWorkerService_Linux_Installation.sh" || true
 fi
 
-bash APIMonitorWorkerService_Linux_Installation.sh --install-path "$INSTALL_PATH" --data-path "$DATA_PATH"
+bash "$SCRIPT_DIR/APIMonitorWorkerService_Linux_Installation.sh" --install-path "$INSTALL_PATH" --data-path "$DATA_PATH"
 
 if [ $? -ne 0 ]; then
     log_error "Prerequisites installation failed"
