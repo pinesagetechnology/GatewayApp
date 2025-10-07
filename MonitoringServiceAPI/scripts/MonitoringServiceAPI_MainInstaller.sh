@@ -596,6 +596,15 @@ main() {
   # Final setup
   chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_PATH"
   
+  # Make permission fix script executable if it exists
+  log_step "Setting up permission fix script..."
+  if [ -f "$INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh" ]; then
+    chmod +x "$INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh"
+    log "Permission fix script made executable"
+  else
+    warn "Permission fix script not found at: $INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh"
+  fi
+  
   echo ""
   echo -e "${GREEN}========================================${NC}"
   echo -e "${GREEN}    Installation Completed Successfully!${NC}"

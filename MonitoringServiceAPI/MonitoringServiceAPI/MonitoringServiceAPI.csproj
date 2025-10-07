@@ -22,4 +22,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\MonitoringServiceAPI\scripts\fix-monitored-folder-permissions.sh" 
+          Link="scripts\fix-monitored-folder-permissions.sh">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

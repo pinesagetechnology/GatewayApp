@@ -7,20 +7,22 @@ namespace MonitoringServiceAPI.Services
     {
         public static IServiceCollection RegisterBusinessServices(this IServiceCollection services)
         {
-            // Register services
+            // Register business services
             services.AddTransient<IUploadQueueService, UploadQueueService>();
             services.AddTransient<IConfigurationService, ConfigurationService>();
             services.AddTransient<IAzureStorageService, AzureStorageService>();
             services.AddTransient<IDataSourceService, DataSourceService>();
             services.AddTransient<IHeartbeatService, HeartbeatService>();
-
+            
+            // Register infrastructure services
+            services.AddTransient<IScriptExecutionService, ScriptExecutionService>();
+            services.AddTransient<IPathValidationService, PathValidationService>();
+            
             // API-specific configuration service to update API Monitoring config table
             services.AddTransient<IApiConfigurationService, ApiConfigurationService>();
-
             services.AddTransient<IAPIDataSourceService, APIDataSourceService>();
 
             return services;
-
         }
     }
 }
