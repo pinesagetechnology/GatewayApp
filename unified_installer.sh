@@ -386,10 +386,31 @@ install_dependencies() {
     
     # Install .NET
     if [ -f "$SCRIPT_DIR/dotnet_install_script.sh" ]; then
-        execute_command "bash \"$SCRIPT_DIR/dotnet_install_script.sh\"" "Install .NET runtime" || {
-            err "Failed to install .NET"
-            exit 1
-        }
+        # .NET install script must NOT be run as root - it uses sudo internally
+        if [ "$EUID" -eq 0 ]; then
+            # Find the original user who invoked sudo
+            ORIGINAL_USER="${SUDO_USER:-$(logname 2>/dev/null || echo $USER)}"
+            if [ -n "$ORIGINAL_USER" ] && [ "$ORIGINAL_USER" != "root" ]; then
+                step "Running .NET installation as user: $ORIGINAL_USER"
+                execute_command "sudo -u $ORIGINAL_USER bash \"$SCRIPT_DIR/dotnet_install_script.sh\"" "Install .NET runtime" || {
+                    err "Failed to install .NET"
+                    exit 1
+                }
+            else
+                warn ".NET installation requires non-root execution"
+                warn "Please run this installer without sudo, or install .NET manually"
+                read -p "Skip .NET installation and continue? (y/N): " -n 1 -r
+                echo
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    exit 1
+                fi
+            fi
+        else
+            execute_command "bash \"$SCRIPT_DIR/dotnet_install_script.sh\"" "Install .NET runtime" || {
+                err "Failed to install .NET"
+                exit 1
+            }
+        fi
     else
         warn ".NET install script not found: $SCRIPT_DIR/dotnet_install_script.sh"
         warn "Assuming .NET is already installed"
