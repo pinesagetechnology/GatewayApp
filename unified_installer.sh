@@ -27,7 +27,7 @@ VERSION="1.0.0"
 WORKSPACE_BASE="/home/alirk/workspace"
 FILEMONITOR_SOURCE="$WORKSPACE_BASE/FileMonitorWorkerService/FileMonitorWorkerService"
 APIMONITOR_SOURCE="$WORKSPACE_BASE/APIMonitorWorkerService/APIMonitorWorkerService"
-MONITORINGAPI_SOURCE="$WORKSPACE_BASE/MonitoringServiceAPI"
+MONITORINGAPI_SOURCE="$WORKSPACE_BASE/MonitoringServiceAPI/MonitoringServiceAPI"
 
 # Data paths
 FILEMONITOR_DATA="/var/filemonitor"
@@ -163,7 +163,7 @@ while [[ $# -gt 0 ]]; do
             WORKSPACE_BASE="$2"
             FILEMONITOR_SOURCE="$WORKSPACE_BASE/FileMonitorWorkerService/FileMonitorWorkerService"
             APIMONITOR_SOURCE="$WORKSPACE_BASE/APIMonitorWorkerService/APIMonitorWorkerService"
-            MONITORINGAPI_SOURCE="$WORKSPACE_BASE/MonitoringServiceAPI"
+            MONITORINGAPI_SOURCE="$WORKSPACE_BASE/MonitoringServiceAPI/MonitoringServiceAPI"
             shift 2
             ;;
         --filemonitor-source)
