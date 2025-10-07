@@ -600,7 +600,7 @@ main() {
   chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_PATH"
   
   # Make permission fix script executable if it exists
-  log_step "Setting up permission fix script..."
+  step "Setting up permission fix script..."
   if [ -f "$INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh" ]; then
     chmod +x "$INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh"
     log "Permission fix script made executable"
