@@ -6,6 +6,10 @@
 
 set -e  # Exit on any error
 
+# Detect script location and change to project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"  # Go up one level from scripts/ to AzureGateway.UI/
+
 # Configuration
 APP_NAME="react-ui-app"
 APP_DIR="/opt/${APP_NAME}"
@@ -118,9 +122,13 @@ setup_app_directory() {
 deploy_app() {
     log "Deploying application to ${APP_DIR}..."
     
+    # Change to project root directory
+    cd "$PROJECT_ROOT"
+    log "Working directory: $(pwd)"
+    
     # Ensure we're in a project directory
     if [[ ! -f "package.json" ]]; then
-        error "package.json not found. Please run this script from your project root directory."
+        error "package.json not found in ${PROJECT_ROOT}. Please check the project structure."
     fi
 
     # Install dependencies (including dev dependencies for build)

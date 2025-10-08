@@ -572,25 +572,32 @@ deploy_react_app() {
         return 0
     fi
     
-    # Change to the React app directory before running the script
-    local react_dir="$(dirname "$deploy_script")"
-    local react_app_dir="$(dirname "$react_dir")"  # Go up one level to AzureGateway.UI
-    info "Changing to React app directory: $react_app_dir"
+    # Get the React app directory (parent of scripts folder)
+    local react_app_dir="$WORKSPACE_BASE/AzureGateway.UI"
+    
+    if [ ! -d "$react_app_dir" ]; then
+        warn "React app directory not found: $react_app_dir"
+        warn "Skipping React app deployment"
+        return 0
+    fi
+    
+    info "React app directory: $react_app_dir"
     
     # React deployment script should NOT be run as root - run as original user
     if [ "$EUID" -eq 0 ]; then
         ORIGINAL_USER="${SUDO_USER:-$(logname 2>/dev/null || echo $USER)}"
         if [ -n "$ORIGINAL_USER" ] && [ "$ORIGINAL_USER" != "root" ]; then
             info "Running React deployment as user: $ORIGINAL_USER"
-            execute_command "cd \"$react_app_dir\" && sudo -u $ORIGINAL_USER bash \"scripts/rpi5-deploy.sh\"" "Deploy React app" || {
+            # Run the script with full path - the script will handle changing to project root
+            execute_command "sudo -u $ORIGINAL_USER bash \"$deploy_script\"" "Deploy React app" || {
                 warn "React app deployment had issues, but continuing..."
             }
         else
             warn "React deployment requires non-root execution"
-            warn "Please deploy React app manually: cd $react_app_dir && bash scripts/rpi5-deploy.sh"
+            warn "Please deploy React app manually: bash $deploy_script"
         fi
     else
-        execute_command "cd \"$react_app_dir\" && bash \"scripts/rpi5-deploy.sh\"" "Deploy React app" || {
+        execute_command "bash \"$deploy_script\"" "Deploy React app" || {
             warn "React app deployment had issues, but continuing..."
         }
     fi
