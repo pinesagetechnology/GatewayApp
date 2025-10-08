@@ -520,14 +520,28 @@ fix_database_permissions() {
     
     header "Step 6: Fixing Database Permissions"
     
-    local permission_script="$SCRIPT_DIR/fix-database-permissions_v2.sh"
+    # Look for permission fix script in multiple locations
+    local permission_script="$WORKSPACE_BASE/MonitoringServiceAPI/scripts/fix-database-permissions_v2.sh"
     
     if [ ! -f "$permission_script" ]; then
-        warn "Permission fix script not found: $permission_script"
-        warn "You may need to fix database permissions manually"
+        permission_script="$SCRIPT_DIR/MonitoringServiceAPI/scripts/fix-database-permissions_v2.sh"
+    fi
+    
+    if [ ! -f "$permission_script" ]; then
+        permission_script="$SCRIPT_DIR/fix-database-permissions_v2.sh"
+    fi
+    
+    if [ ! -f "$permission_script" ]; then
+        warn "Permission fix script not found"
+        warn "Tried locations:"
+        warn "  - $WORKSPACE_BASE/MonitoringServiceAPI/scripts/fix-database-permissions_v2.sh"
+        warn "  - $SCRIPT_DIR/fix-database-permissions_v2.sh"
+        warn "You may need to fix database permissions manually using:"
+        warn "  sudo bash MonitoringServiceAPI/scripts/fix-database-permissions_v2.sh"
         return 0
     fi
     
+    info "Using permission script: $permission_script"
     local cmd="bash \"$permission_script\" --apimonitor-data \"$APIMONITOR_DATA\" --filemonitor-data \"$FILEMONITOR_DATA\""
     
     execute_command "$cmd" "Fix database permissions" || {
