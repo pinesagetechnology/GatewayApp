@@ -88,8 +88,8 @@ update_config_files() {
         # Normalize CRLF just in case
         sed -i 's/\r$//' "$config_file" || true
 
-        # Update database path
-        sed -i "s|\"Data Source=.*\"|\"Data Source=$DATA_PATH/database/filemonitor.db\"|g" "$config_file" || true
+        # Update database path with shared cache mode
+        sed -i "s|\"Data Source=.*\"|\"Data Source=$DATA_PATH/database/filemonitor.db;Mode=ReadWriteCreate;Cache=Shared\"|g" "$config_file" || true
 
         log_info "Updated $config_file"
     fi

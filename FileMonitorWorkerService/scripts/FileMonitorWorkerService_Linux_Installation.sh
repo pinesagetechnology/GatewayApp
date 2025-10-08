@@ -363,8 +363,8 @@ update_config_files() {
             # Create backup
             cp "$config_file" "$config_file.backup"
             
-            # Update database path using sed
-            sed -i "s|\"Data Source=.*\"|\"Data Source=$DATA_PATH/database/filemonitor.db\"|g" "$config_file"
+            # Update database path using sed with shared cache mode
+            sed -i "s|\"Data Source=.*\"|\"Data Source=$DATA_PATH/database/filemonitor.db;Mode=ReadWriteCreate;Cache=Shared\"|g" "$config_file"
             
             log_info "Updated $config_file"
         fi

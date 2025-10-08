@@ -125,10 +125,10 @@ update_config() {
     [ -f "$f" ] || continue
     cp "$f" "$f.backup" || true
     
-    # Update connection strings to point to other services' databases
+    # Update connection strings to point to other services' databases with shared cache mode
     # Note: These paths should be updated to match actual FileMonitor and APIMonitor data paths
-    sed -i "s|\"FileMonitorConnection\":.*|\"FileMonitorConnection\": \"Data Source=/var/filemonitor/database/filemonitor.db\"|g" "$f" || true
-    sed -i "s|\"ApiMonitorConnection\":.*|\"ApiMonitorConnection\": \"Data Source=/var/apimonitor/database/apimonitor.db\"|g" "$f" || true
+    sed -i "s|\"FileMonitorConnection\":.*|\"FileMonitorConnection\": \"Data Source=/var/filemonitor/database/filemonitor.db;Mode=ReadWriteCreate;Cache=Shared\",|g" "$f" || true
+    sed -i "s|\"ApiMonitorConnection\":.*|\"ApiMonitorConnection\": \"Data Source=/var/apimonitor/database/apimonitor.db;Mode=ReadWriteCreate;Cache=Shared\"|g" "$f" || true
     
     if grep -q "Urls" "$f"; then
       sed -i "s|\"Urls\":.*|\"Urls\": \"http://localhost:$API_PORT\"|g" "$f" || true

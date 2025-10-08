@@ -290,9 +290,9 @@ configure_application() {
     # Backup original
     cp "$appsettings" "$appsettings.backup"
     
-    # Update connection strings to point to other services' databases
-    sed -i "s|\"FileMonitorConnection\":.*|\"FileMonitorConnection\": \"Data Source=/var/filemonitor/database/filemonitor.db\",|g" "$appsettings"
-    sed -i "s|\"ApiMonitorConnection\":.*|\"ApiMonitorConnection\": \"Data Source=/var/apimonitor/database/apimonitor.db\"|g" "$appsettings"
+    # Update connection strings to point to other services' databases with shared cache mode
+    sed -i "s|\"FileMonitorConnection\":.*|\"FileMonitorConnection\": \"Data Source=/var/filemonitor/database/filemonitor.db;Mode=ReadWriteCreate;Cache=Shared\",|g" "$appsettings"
+    sed -i "s|\"ApiMonitorConnection\":.*|\"ApiMonitorConnection\": \"Data Source=/var/apimonitor/database/apimonitor.db;Mode=ReadWriteCreate;Cache=Shared\"|g" "$appsettings"
     
     # Update URLs if present
     if grep -q "Urls" "$appsettings"; then
@@ -308,8 +308,8 @@ configure_application() {
     "PermissionScript": "scripts/fix-monitored-folder-permissions.sh"
   },
   "ConnectionStrings": {
-    "FileMonitorConnection": "Data Source=/var/filemonitor/database/filemonitor.db",
-    "ApiMonitorConnection": "Data Source=/var/apimonitor/database/apimonitor.db"
+    "FileMonitorConnection": "Data Source=/var/filemonitor/database/filemonitor.db;Mode=ReadWriteCreate;Cache=Shared",
+    "ApiMonitorConnection": "Data Source=/var/apimonitor/database/apimonitor.db;Mode=ReadWriteCreate;Cache=Shared"
   },
   "Logging": {
     "LogLevel": {
