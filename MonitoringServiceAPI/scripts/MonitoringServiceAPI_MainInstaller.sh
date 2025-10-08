@@ -291,7 +291,7 @@ configure_application() {
     cp "$appsettings" "$appsettings.backup"
     
     # Update connection strings to point to other services' databases
-    sed -i "s|\"FileMonitorConnection\":.*|\"FileMonitorConnection\": \"Data Source=/var/filemonitor/database/filemonitor.db\"|g" "$appsettings"
+    sed -i "s|\"FileMonitorConnection\":.*|\"FileMonitorConnection\": \"Data Source=/var/filemonitor/database/filemonitor.db\",|g" "$appsettings"
     sed -i "s|\"ApiMonitorConnection\":.*|\"ApiMonitorConnection\": \"Data Source=/var/apimonitor/database/apimonitor.db\"|g" "$appsettings"
     
     # Update URLs if present
