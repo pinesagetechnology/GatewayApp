@@ -307,21 +307,39 @@ optimize_system() {
     # Increase swap if needed
     CURRENT_SWAP=$(free -m | awk '/^Swap:/ {print $2}')
     if [[ $CURRENT_SWAP -lt 1024 ]]; then
-        log "Increasing swap space..."
-        sudo dphys-swapfile swapoff
-        sudo sed -i 's/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile
-        sudo dphys-swapfile setup
-        sudo dphys-swapfile swapon
+        log "Current swap: ${CURRENT_SWAP}MB. Attempting to increase..."
+        
+        # Check if dphys-swapfile is available
+        if command -v dphys-swapfile &> /dev/null; then
+            sudo dphys-swapfile swapoff
+            sudo sed -i 's/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile
+            sudo dphys-swapfile setup
+            sudo dphys-swapfile swapon
+            log "Swap space increased to 1024MB"
+        else
+            warn "dphys-swapfile not available. Skipping swap configuration."
+            warn "Consider increasing swap manually if build fails due to memory issues."
+        fi
+    else
+        log "Swap space is sufficient: ${CURRENT_SWAP}MB"
     fi
     
-    # GPU memory split optimization
-    if ! grep -q "gpu_mem=64" /boot/config.txt; then
-        echo "gpu_mem=64" | sudo tee -a /boot/config.txt
-        warn "GPU memory split updated. Reboot required to take effect."
+    # GPU memory split optimization (skip if not Raspberry Pi)
+    if [ -f /boot/config.txt ]; then
+        if ! grep -q "gpu_mem=64" /boot/config.txt; then
+            echo "gpu_mem=64" | sudo tee -a /boot/config.txt
+            warn "GPU memory split updated. Reboot required to take effect."
+        fi
+    else
+        warn "/boot/config.txt not found. Skipping GPU memory configuration."
     fi
     
-    # Set CPU governor to performance
-    echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
+    # Set CPU governor to performance (skip if not available)
+    if [ -f /etc/default/cpufrequtils ]; then
+        echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
+    else
+        warn "cpufrequtils not available. Skipping CPU governor configuration."
+    fi
     
     log "System optimization completed"
 }
