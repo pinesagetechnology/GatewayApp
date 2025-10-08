@@ -425,7 +425,10 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public  # Commented out - React app needs public folder committed
+
+# Gatsby public folder (if using Gatsby, uncomment and be more specific)
+# gatsby-site/public/
 
 # Storybook build outputs
 .out
