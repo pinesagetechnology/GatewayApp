@@ -543,15 +543,27 @@ deploy_react_app() {
     
     header "Step 7: Deploying React App"
     
-    local deploy_script="$SCRIPT_DIR/rpi5-deploy.sh"
+    # Look for the React deployment script in AzureGateway.UI/scripts directory
+    local deploy_script="$WORKSPACE_BASE/AzureGateway.UI/scripts/rpi5-deploy.sh"
+    
+    if [ ! -f "$deploy_script" ]; then
+        # Fallback to script directory
+        deploy_script="$SCRIPT_DIR/AzureGateway.UI/scripts/rpi5-deploy.sh"
+    fi
     
     if [ ! -f "$deploy_script" ]; then
         warn "React deployment script not found: $deploy_script"
+        warn "Expected location: $WORKSPACE_BASE/AzureGateway.UI/scripts/rpi5-deploy.sh"
         warn "Skipping React app deployment"
         return 0
     fi
     
-    execute_command "bash \"$deploy_script\"" "Deploy React app" || {
+    # Change to the React app directory before running the script
+    local react_dir="$(dirname "$deploy_script")"
+    local react_app_dir="$(dirname "$react_dir")"  # Go up one level to AzureGateway.UI
+    info "Changing to React app directory: $react_app_dir"
+    
+    execute_command "cd \"$react_app_dir\" && bash \"scripts/rpi5-deploy.sh\"" "Deploy React app" || {
         warn "React app deployment had issues, but continuing..."
     }
 }
