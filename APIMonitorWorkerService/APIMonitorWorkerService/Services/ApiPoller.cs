@@ -125,38 +125,94 @@ namespace APIMonitorWorkerService.Services
 
         private HttpClient CreateConfiguredHttpClient(APIDataSourceConfig config)
         {
-            var httpClient = _httpClientFactory.CreateClient();
+            HttpClient httpClient;
+            ApiPollerSettings? settings = null;
             
-            using var scope = _serviceProvider.CreateScope();
-            var configService = scope.ServiceProvider.GetRequiredService<IConfigurationService>();
+            // Parse additional settings first
+            if (!string.IsNullOrEmpty(config.AdditionalSettings))
+            {
+                try
+                {
+                    settings = JsonSerializer.Deserialize<ApiPollerSettings>(config.AdditionalSettings);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse additional settings for {Name}", config.Name);
+                }
+            }
+            
+            // Check if authentication is required
+            if (settings != null && !string.IsNullOrEmpty(settings.AuthenticationType))
+            {
+                var authType = settings.AuthenticationType.ToLower();
+                
+                if (authType == "digest" && !string.IsNullOrEmpty(settings.Username) && !string.IsNullOrEmpty(settings.Password))
+                {
+                    // Create HttpClient with Digest authentication handler
+                    _logger.LogInformation("Configuring Digest authentication for {Name}", config.Name);
+                    
+                    using var scope = _serviceProvider.CreateScope();
+                    var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+                    var digestLogger = loggerFactory.CreateLogger<DigestAuthenticationHandler>();
+                    
+                    var digestHandler = new DigestAuthenticationHandler(settings.Username, settings.Password, digestLogger);
+                    httpClient = new HttpClient(digestHandler);
+                }
+                else if (authType == "basic" && !string.IsNullOrEmpty(settings.Username) && !string.IsNullOrEmpty(settings.Password))
+                {
+                    // Create HttpClient with Basic authentication
+                    _logger.LogInformation("Configuring Basic authentication for {Name}", config.Name);
+                    httpClient = _httpClientFactory.CreateClient();
+                    
+                    var credentials = Convert.ToBase64String(
+                        System.Text.Encoding.UTF8.GetBytes($"{settings.Username}:{settings.Password}"));
+                    httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
+                }
+                else if (authType == "bearer" && !string.IsNullOrEmpty(settings.AuthenticationValue))
+                {
+                    // Bearer token authentication
+                    _logger.LogInformation("Configuring Bearer token authentication for {Name}", config.Name);
+                    httpClient = _httpClientFactory.CreateClient();
+                    httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {settings.AuthenticationValue}");
+                }
+                else
+                {
+                    _logger.LogWarning("Invalid authentication configuration for {Name}", config.Name);
+                    httpClient = _httpClientFactory.CreateClient();
+                }
+            }
+            else
+            {
+                // No authentication
+                httpClient = _httpClientFactory.CreateClient();
+            }
+            
+            using var scope2 = _serviceProvider.CreateScope();
+            var configService = scope2.ServiceProvider.GetRequiredService<IConfigurationService>();
 
             // Set timeout
             var timeoutSeconds = configService.GetValueAsync<int?>("Api.TimeoutSeconds").Result ?? 30;
             httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 
-            // Add API key if configured
+            // Add API key if configured (in addition to auth)
             if (!string.IsNullOrEmpty(config.ApiKey))
             {
                 httpClient.DefaultRequestHeaders.Add("X-API-Key", config.ApiKey);
             }
 
             // Add custom headers from additional settings
-            if (!string.IsNullOrEmpty(config.AdditionalSettings))
+            if (settings?.Headers != null)
             {
-                try
+                foreach (var header in settings.Headers)
                 {
-                    var settings = JsonSerializer.Deserialize<ApiPollerSettings>(config.AdditionalSettings);
-                    if (settings?.Headers != null)
+                    try
                     {
-                        foreach (var header in settings.Headers)
-                        {
-                            httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
-                        }
+                        httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
                     }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to parse additional settings for {Name}", config.Name);
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to add header {Key} for {Name}", header.Key, config.Name);
+                    }
                 }
             }
 

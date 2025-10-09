@@ -608,6 +608,16 @@ main() {
     warn "Permission fix script not found at: $INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh"
   fi
   
+  # Configure sudo access for MonitoringServiceAPI to run permission script
+  step "Configuring sudo access for permission script..."
+  cat > "/etc/sudoers.d/$SERVICE_NAME" <<EOF
+# Allow $SERVICE_USER to run the permission fix script without password
+$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh*
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash $INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh*
+EOF
+  chmod 440 "/etc/sudoers.d/$SERVICE_NAME"
+  log "Sudo access configured for permission script"
+  
   echo ""
   echo -e "${GREEN}========================================${NC}"
   echo -e "${GREEN}    Installation Completed Successfully!${NC}"

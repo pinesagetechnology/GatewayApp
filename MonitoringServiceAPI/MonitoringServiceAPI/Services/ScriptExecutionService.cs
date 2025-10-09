@@ -93,11 +93,11 @@ namespace MonitoringServiceAPI.Services
                 _logger.LogInformation("Executing permission script: bash {ScriptPath} {Arguments}", 
                     _scriptPath, arguments.ToString());
 
-                // Configure process
+                // Configure process - run with sudo for permission operations
                 var processStartInfo = new ProcessStartInfo
                 {
-                    FileName = "bash",
-                    Arguments = $"{_scriptPath} {arguments}",
+                    FileName = "sudo",
+                    Arguments = $"bash {_scriptPath} {arguments}",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
