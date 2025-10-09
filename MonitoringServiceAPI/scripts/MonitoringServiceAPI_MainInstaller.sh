@@ -547,6 +547,59 @@ EOF
   log "Deployment guide created: $INSTALL_PATH/DEPLOYMENT_GUIDE.txt"
 }
 
+# Function to setup limited sudo access
+setup_limited_sudo_access() {
+  step "Configuring limited sudo access for $SERVICE_USER..."
+  
+  local sudoers_file="/etc/sudoers.d/$SERVICE_NAME"
+  
+  cat > "$sudoers_file" <<EOF
+# Limited sudo access for monitoringapi
+# Allows monitoringapi to perform file/folder operations, run scripts, and manage permissions
+
+# File and directory operations
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mkdir, /bin/mkdir *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rm, /bin/rm *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rmdir, /bin/rmdir *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mv, /bin/mv *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/cp, /bin/cp *
+
+# Permission management (for fixing monitored folder permissions)
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chmod *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chown *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chgrp *
+
+# Touch files
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/touch, /bin/touch *
+
+# Run shell scripts (own scripts + permission fix scripts)
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash $INSTALL_PATH/scripts/*.sh
+$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $INSTALL_PATH/scripts/*.sh
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/sh $INSTALL_PATH/scripts/*.sh
+
+# User management (for adding users to monitor-services group)
+$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/sbin/usermod -a -G monitor-services *
+
+# Service management (can restart all monitoring services)
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart apimonitor
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart filemonitor
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart monitoringapi
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl status *
+EOF
+  
+  # Set correct permissions (CRITICAL)
+  chmod 440 "$sudoers_file"
+  
+  # Validate syntax
+  if visudo -c -f "$sudoers_file" &>/dev/null; then
+    log "Limited sudo access configured: $sudoers_file"
+  else
+    err "Invalid sudoers syntax, removing file"
+    rm -f "$sudoers_file"
+    warn "Service will run without sudo access"
+  fi
+}
+
 main() {
   echo -e "${GREEN}========================================${NC}"
   echo -e "${GREEN}    MonitoringServiceAPI Main Installer${NC}"
@@ -608,15 +661,8 @@ main() {
     warn "Permission fix script not found at: $INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh"
   fi
   
-  # Configure sudo access for MonitoringServiceAPI to run permission script
-  step "Configuring sudo access for permission script..."
-  cat > "/etc/sudoers.d/$SERVICE_NAME" <<EOF
-# Allow $SERVICE_USER to run the permission fix script without password
-$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash $INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh*
-EOF
-  chmod 440 "/etc/sudoers.d/$SERVICE_NAME"
-  log "Sudo access configured for permission script"
+  # Configure limited sudo access for MonitoringServiceAPI
+  setup_limited_sudo_access
   
   echo ""
   echo -e "${GREEN}========================================${NC}"

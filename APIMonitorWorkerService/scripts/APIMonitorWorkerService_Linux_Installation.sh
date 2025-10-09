@@ -502,6 +502,59 @@ EOF
     log_info "Log rotation configured"
 }
 
+# Function to setup limited sudo access
+setup_sudo_access() {
+    log_step "Setting up limited sudo access for $SERVICE_USER..."
+    
+    local sudoers_file="/etc/sudoers.d/$SERVICE_NAME"
+    
+    cat > "$sudoers_file" << EOF
+# Limited sudo access for $SERVICE_NAME
+# Allows $SERVICE_USER to perform file/folder operations and run monitoring scripts
+
+# File and directory operations
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mkdir, /bin/mkdir *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rm, /bin/rm *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rmdir, /bin/rmdir *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mv, /bin/mv *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/cp, /bin/cp *
+
+# Permission management
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chmod *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chown *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chgrp *
+
+# Touch files
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/touch, /bin/touch *
+
+# Run shell scripts (restricted to specific paths)
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash $INSTALL_PATH/scripts/*.sh
+$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $INSTALL_PATH/scripts/*.sh
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/sh $INSTALL_PATH/scripts/*.sh
+
+# Allow running scripts from monitored folders
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash /var/$SERVICE_NAME/*
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash /home/*/workspace/*
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash /home/*/monitored/*
+
+# Service management (only for own service)
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart $SERVICE_NAME
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl status $SERVICE_NAME
+EOF
+    
+    # Set correct permissions (CRITICAL)
+    chmod 440 "$sudoers_file"
+    
+    # Validate syntax
+    if visudo -c -f "$sudoers_file" &>/dev/null; then
+        log_info "Limited sudo access configured: $sudoers_file"
+    else
+        log_error "Invalid sudoers syntax, removing file"
+        rm -f "$sudoers_file"
+        log_warn "Service will run without sudo access"
+    fi
+}
+
 # Main installation process
 main() {
     echo -e "${GREEN}=== APIMonitorWorkerService Linux Installation ===${NC}"
@@ -556,6 +609,7 @@ main() {
     create_systemd_service
     create_startup_script
     setup_log_rotation
+    setup_sudo_access
     create_deployment_guide
 
     echo ""
