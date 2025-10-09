@@ -91,11 +91,15 @@ ${service_user} ALL=(ALL) NOPASSWD: /bin/chgrp *
 ${service_user} ALL=(ALL) NOPASSWD: /bin/touch, /bin/touch *
 
 # Run shell scripts (restricted to specific paths - both absolute and relative)
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash ${install_path}/scripts/*.sh
-${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash ${install_path}/scripts/*.sh
-${service_user} ALL=(ALL) NOPASSWD: /bin/sh ${install_path}/scripts/*.sh
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash scripts/*.sh
-${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*.sh
+# Allow with full paths to bash
+${service_user} ALL=(ALL) NOPASSWD: /bin/bash ${install_path}/scripts/*
+${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash ${install_path}/scripts/*
+${service_user} ALL=(ALL) NOPASSWD: /bin/sh ${install_path}/scripts/*
+${service_user} ALL=(ALL) NOPASSWD: /bin/bash scripts/*
+${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*
+# Also allow without full path (when bash is resolved via PATH)
+${service_user} ALL=(ALL) NOPASSWD: bash ${install_path}/scripts/*
+${service_user} ALL=(ALL) NOPASSWD: bash scripts/*
 
 # Allow running scripts from monitored folders (for processing)
 ${service_user} ALL=(ALL) NOPASSWD: /bin/bash /var/${service_name}/*
@@ -158,11 +162,15 @@ ${service_user} ALL=(ALL) NOPASSWD: /bin/chgrp *
 ${service_user} ALL=(ALL) NOPASSWD: /bin/touch, /bin/touch *
 
 # Run shell scripts (own scripts + permission fix scripts - both absolute and relative)
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash ${install_path}/scripts/*.sh
-${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash ${install_path}/scripts/*.sh
-${service_user} ALL=(ALL) NOPASSWD: /bin/sh ${install_path}/scripts/*.sh
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash scripts/*.sh
-${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*.sh
+# Allow with full paths to bash
+${service_user} ALL=(ALL) NOPASSWD: /bin/bash ${install_path}/scripts/*
+${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash ${install_path}/scripts/*
+${service_user} ALL=(ALL) NOPASSWD: /bin/sh ${install_path}/scripts/*
+${service_user} ALL=(ALL) NOPASSWD: /bin/bash scripts/*
+${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*
+# Also allow without full path (when bash is resolved via PATH)
+${service_user} ALL=(ALL) NOPASSWD: bash ${install_path}/scripts/*
+${service_user} ALL=(ALL) NOPASSWD: bash scripts/*
 
 # User management (for adding users to monitor-services group)
 ${service_user} ALL=(ALL) NOPASSWD: /usr/sbin/usermod -a -G monitor-services *
