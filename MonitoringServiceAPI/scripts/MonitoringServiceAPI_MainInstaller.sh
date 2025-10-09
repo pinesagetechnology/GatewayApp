@@ -572,10 +572,12 @@ $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chgrp *
 # Touch files
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/touch, /bin/touch *
 
-# Run shell scripts (own scripts + permission fix scripts)
+# Run shell scripts (own scripts + permission fix scripts - both absolute and relative)
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash $INSTALL_PATH/scripts/*.sh
 $SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $INSTALL_PATH/scripts/*.sh
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/sh $INSTALL_PATH/scripts/*.sh
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash scripts/*.sh
+$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*.sh
 
 # User management (for adding users to monitor-services group)
 $SERVICE_USER ALL=(ALL) NOPASSWD: /usr/sbin/usermod -a -G monitor-services *

@@ -524,10 +524,12 @@ $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chgrp *
 # Touch files
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/touch, /bin/touch *
 
-# Run shell scripts (restricted to specific paths)
+# Run shell scripts (restricted to specific paths - both absolute and relative)
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash $INSTALL_PATH/scripts/*.sh
 $SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $INSTALL_PATH/scripts/*.sh
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/sh $INSTALL_PATH/scripts/*.sh
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash scripts/*.sh
+$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*.sh
 
 # Allow running scripts from monitored folders
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash /var/$SERVICE_NAME/*
