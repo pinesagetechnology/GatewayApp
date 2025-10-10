@@ -558,11 +558,11 @@ setup_limited_sudo_access() {
 # Allows monitoringapi to perform file/folder operations, run scripts, and manage permissions
 
 # File and directory operations
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mkdir, /bin/mkdir *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rm, /bin/rm *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rmdir, /bin/rmdir *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mv, /bin/mv *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/cp, /bin/cp *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mkdir *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rm *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rmdir *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mv *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/cp *
 
 # Permission management (for fixing monitored folder permissions)
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chmod *
@@ -570,7 +570,7 @@ $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chown *
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chgrp *
 
 # Touch files
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/touch, /bin/touch *
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/touch *
 
 # Run shell scripts (own scripts + permission fix scripts - both absolute and relative)
 # Allow with full paths to bash

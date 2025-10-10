@@ -76,19 +76,19 @@ create_sudoers_config() {
 # Allows ${service_user} to perform file/folder operations and run monitoring scripts
 
 # File and directory operations
-${service_user} ALL=(ALL) NOPASSWD: /bin/mkdir, /bin/mkdir *
-${service_user} ALL=(ALL) NOPASSWD: /bin/rm, /bin/rm *
-${service_user} ALL=(ALL) NOPASSWD: /bin/rmdir, /bin/rmdir *
-${service_user} ALL=(ALL) NOPASSWD: /bin/mv, /bin/mv *
-${service_user} ALL=(ALL) NOPASSWD: /bin/cp, /bin/cp *
+${service_user} ALL=(ALL) NOPASSWD: /bin/mkdir *
+${service_user} ALL=(ALL) NOPASSWD: /bin/rm *
+${service_user} ALL=(ALL) NOPASSWD: /bin/rmdir *
+${service_user} ALL=(ALL) NOPASSWD: /bin/mv *
+${service_user} ALL=(ALL) NOPASSWD: /bin/cp *
 
-# Permission management (restricted to monitoring paths)
+# Permission management
 ${service_user} ALL=(ALL) NOPASSWD: /bin/chmod *
 ${service_user} ALL=(ALL) NOPASSWD: /bin/chown *
 ${service_user} ALL=(ALL) NOPASSWD: /bin/chgrp *
 
-# Touch files (for creating empty files)
-${service_user} ALL=(ALL) NOPASSWD: /bin/touch, /bin/touch *
+# Touch files
+${service_user} ALL=(ALL) NOPASSWD: /bin/touch *
 
 # Run shell scripts (restricted to specific paths - both absolute and relative)
 # Allow with full paths to bash
@@ -147,11 +147,11 @@ create_monitoringapi_sudoers() {
 # Allows monitoringapi to perform file/folder operations, run scripts, and manage permissions
 
 # File and directory operations
-${service_user} ALL=(ALL) NOPASSWD: /bin/mkdir, /bin/mkdir *
-${service_user} ALL=(ALL) NOPASSWD: /bin/rm, /bin/rm *
-${service_user} ALL=(ALL) NOPASSWD: /bin/rmdir, /bin/rmdir *
-${service_user} ALL=(ALL) NOPASSWD: /bin/mv, /bin/mv *
-${service_user} ALL=(ALL) NOPASSWD: /bin/cp, /bin/cp *
+${service_user} ALL=(ALL) NOPASSWD: /bin/mkdir *
+${service_user} ALL=(ALL) NOPASSWD: /bin/rm *
+${service_user} ALL=(ALL) NOPASSWD: /bin/rmdir *
+${service_user} ALL=(ALL) NOPASSWD: /bin/mv *
+${service_user} ALL=(ALL) NOPASSWD: /bin/cp *
 
 # Permission management (for fixing monitored folder permissions)
 ${service_user} ALL=(ALL) NOPASSWD: /bin/chmod *
@@ -159,7 +159,7 @@ ${service_user} ALL=(ALL) NOPASSWD: /bin/chown *
 ${service_user} ALL=(ALL) NOPASSWD: /bin/chgrp *
 
 # Touch files
-${service_user} ALL=(ALL) NOPASSWD: /bin/touch, /bin/touch *
+${service_user} ALL=(ALL) NOPASSWD: /bin/touch *
 
 # Run shell scripts (own scripts + permission fix scripts - both absolute and relative)
 # Allow with full paths to bash
