@@ -346,7 +346,7 @@ RestartSec=10
 Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=ASPNETCORE_URLS=http://localhost:$API_PORT
-NoNewPrivileges=true
+# NoNewPrivileges disabled to allow sudo usage for permission scripts
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=false

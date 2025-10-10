@@ -312,7 +312,7 @@ Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
 Environment=ASPNETCORE_ENVIRONMENT=Production
 
 # Security settings
-NoNewPrivileges=true
+# NoNewPrivileges disabled to allow sudo usage for file operations
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=false
