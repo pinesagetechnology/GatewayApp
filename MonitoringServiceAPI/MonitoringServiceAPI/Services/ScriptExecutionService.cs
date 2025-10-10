@@ -90,14 +90,21 @@ namespace MonitoringServiceAPI.Services
                     arguments.Append($" --owner \"{ownerUser}\"");
                 }
 
-                _logger.LogInformation("Executing permission script: bash {ScriptPath} {Arguments}", 
-                    _scriptPath, arguments.ToString());
+                // Use absolute path to bash (required for sudo)
+                var bashPath = "/bin/bash";
+                if (!File.Exists(bashPath))
+                {
+                    bashPath = "/usr/bin/bash";
+                }
+
+                _logger.LogInformation("Executing permission script: {BashPath} {ScriptPath} {Arguments}", 
+                    bashPath, _scriptPath, arguments.ToString());
 
                 // Configure process - run with sudo for permission operations
                 var processStartInfo = new ProcessStartInfo
                 {
                     FileName = "sudo",
-                    Arguments = $"bash {_scriptPath} {arguments}",
+                    Arguments = $"{bashPath} {_scriptPath} {arguments}",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
