@@ -113,10 +113,11 @@ create_monitoringapi_sudoers() {
     fi
     
     # Create sudoers configuration (MonitoringAPI needs access to permission scripts)
+    # Note: Must support both absolute paths and relative paths from WorkingDirectory
     cat > "$sudoers_file" << EOF
 # Limited sudo access for monitoringapi
 Cmnd_Alias MONITORING_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/chgrp, /bin/touch
-Cmnd_Alias MONITORING_SCRIPTS = /bin/bash ${install_path}/scripts/*, /usr/bin/bash ${install_path}/scripts/*, /bin/bash ${install_path}/scripts/*.sh, /usr/bin/bash ${install_path}/scripts/*.sh
+Cmnd_Alias MONITORING_SCRIPTS = /bin/bash ${install_path}/scripts/*, /usr/bin/bash ${install_path}/scripts/*, /bin/bash ${install_path}/scripts/*.sh, /usr/bin/bash ${install_path}/scripts/*.sh, /bin/bash scripts/*, /usr/bin/bash scripts/*, /bin/bash scripts/*.sh, /usr/bin/bash scripts/*.sh, bash ${install_path}/scripts/*, bash ${install_path}/scripts/*.sh, bash scripts/*, bash scripts/*.sh
 Cmnd_Alias MONITORING_USER_MGT = /usr/sbin/usermod -a -G monitor-services *
 Cmnd_Alias MONITORING_SERVICES = /bin/systemctl restart apimonitor, /bin/systemctl restart filemonitor, /bin/systemctl restart monitoringapi, /bin/systemctl status *
 
