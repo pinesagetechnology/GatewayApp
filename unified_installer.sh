@@ -39,6 +39,7 @@ SKIP_DEPENDENCIES=false
 SKIP_FILEMONITOR=false
 SKIP_APIMONITOR=false
 SKIP_MONITORING=false
+SKIP_SUDO=false
 SKIP_PERMISSIONS=false
 SKIP_REACT=false
 
@@ -95,8 +96,9 @@ Executes the complete installation sequence:
   3. Install FileMonitorWorkerService
   4. Install APIMonitorWorkerService
   5. Install MonitoringServiceAPI (no DB - uses FileMonitor and APIMonitor DBs)
-  6. Fix database permissions
-  7. Deploy React app
+  6. Configure limited sudo access for services
+  7. Fix database permissions
+  8. Deploy React app
 
 ${YELLOW}USAGE:${NC}
   sudo $0 [OPTIONS]
@@ -118,6 +120,7 @@ ${YELLOW}OPTIONS:${NC}
     --skip-filemonitor         Skip FileMonitorWorkerService installation
     --skip-apimonitor          Skip APIMonitorWorkerService installation
     --skip-monitoring          Skip MonitoringServiceAPI installation
+    --skip-sudo                Skip sudo access configuration
     --skip-permissions         Skip database permission fixes
     --skip-react               Skip React app deployment
 
@@ -206,6 +209,10 @@ while [[ $# -gt 0 ]]; do
             SKIP_MONITORING=true
             shift
             ;;
+        --skip-sudo)
+            SKIP_SUDO=true
+            shift
+            ;;
         --skip-permissions)
             SKIP_PERMISSIONS=true
             shift
@@ -291,8 +298,9 @@ show_installation_plan() {
     [ "$SKIP_FILEMONITOR" = false ] && echo -e "  ${GREEN}3.${NC} Install FileMonitorWorkerService" || echo -e "  ${YELLOW}3.${NC} Install FileMonitorWorkerService (skipped)"
     [ "$SKIP_APIMONITOR" = false ] && echo -e "  ${GREEN}4.${NC} Install APIMonitorWorkerService" || echo -e "  ${YELLOW}4.${NC} Install APIMonitorWorkerService (skipped)"
     [ "$SKIP_MONITORING" = false ] && echo -e "  ${GREEN}5.${NC} Install MonitoringServiceAPI" || echo -e "  ${YELLOW}5.${NC} Install MonitoringServiceAPI (skipped)"
-    [ "$SKIP_PERMISSIONS" = false ] && echo -e "  ${GREEN}6.${NC} Fix database permissions" || echo -e "  ${YELLOW}6.${NC} Fix database permissions (skipped)"
-    [ "$SKIP_REACT" = false ] && echo -e "  ${GREEN}7.${NC} Deploy React app" || echo -e "  ${YELLOW}7.${NC} Deploy React app (skipped)"
+    [ "$SKIP_SUDO" = false ] && echo -e "  ${GREEN}6.${NC} Configure limited sudo access for services" || echo -e "  ${YELLOW}6.${NC} Configure sudo access (skipped)"
+    [ "$SKIP_PERMISSIONS" = false ] && echo -e "  ${GREEN}7.${NC} Fix database permissions" || echo -e "  ${YELLOW}7.${NC} Fix database permissions (skipped)"
+    [ "$SKIP_REACT" = false ] && echo -e "  ${GREEN}8.${NC} Deploy React app" || echo -e "  ${YELLOW}8.${NC} Deploy React app (skipped)"
     
     echo ""
     echo -e "${CYAN}Source Paths:${NC}"
@@ -512,13 +520,50 @@ install_monitoringapi() {
     }
 }
 
-# Step 6: Fix database permissions
+# Step 6: Configure sudo access for services
+configure_sudo_access() {
+    if [ "$SKIP_SUDO" = true ]; then
+        return 0
+    fi
+    
+    header "Step 6: Configuring Limited Sudo Access"
+    
+    info "Granting limited sudo privileges to service users..."
+    info "This allows services to create/delete/move files and run scripts"
+    echo ""
+    
+    # Check if grant script exists
+    local sudo_script="$SCRIPT_DIR/grant_limited_sudo_access.sh"
+    
+    if [ ! -f "$sudo_script" ]; then
+        warn "Sudo configuration script not found: $sudo_script"
+        warn "Services will be installed without sudo access"
+        warn "You can configure sudo later by running:"
+        warn "  sudo bash grant_limited_sudo_access.sh"
+        return 0
+    fi
+    
+    # Make script executable
+    chmod +x "$sudo_script"
+    
+    # Run the sudo configuration script
+    if bash "$sudo_script"; then
+        log "Sudo access configured successfully"
+    else
+        warn "Sudo configuration had issues, but continuing..."
+        warn "Services may not have sudo access"
+    fi
+    
+    echo ""
+}
+
+# Step 7: Fix database permissions
 fix_database_permissions() {
     if [ "$SKIP_PERMISSIONS" = true ]; then
         return 0
     fi
     
-    header "Step 6: Fixing Database Permissions"
+    header "Step 7: Fixing Database Permissions"
     
     # Look for permission fix script in multiple locations
     local permission_script="$WORKSPACE_BASE/MonitoringServiceAPI/scripts/fix-database-permissions_v2.sh"
@@ -549,13 +594,13 @@ fix_database_permissions() {
     }
 }
 
-# Step 7: Deploy React app
+# Step 8: Deploy React app
 deploy_react_app() {
     if [ "$SKIP_REACT" = true ]; then
         return 0
     fi
     
-    header "Step 7: Deploying React App"
+    header "Step 8: Deploying React App"
     
     # Look for the React deployment script in AzureGateway.UI/scripts directory
     local deploy_script="$WORKSPACE_BASE/AzureGateway.UI/scripts/rpi5-deploy.sh"
@@ -688,6 +733,7 @@ main() {
     install_filemonitor
     install_apimonitor
     install_monitoringapi
+    configure_sudo_access
     fix_database_permissions
     deploy_react_app
     

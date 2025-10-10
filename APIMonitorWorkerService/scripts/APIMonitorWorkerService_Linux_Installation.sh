@@ -398,7 +398,7 @@ Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
 Environment=ASPNETCORE_ENVIRONMENT=Production
 
 # Security settings
-NoNewPrivileges=true
+# NoNewPrivileges disabled to allow sudo usage for file operations
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=false
@@ -502,6 +502,36 @@ EOF
     log_info "Log rotation configured"
 }
 
+# Function to setup limited sudo access
+setup_sudo_access() {
+    log_step "Setting up limited sudo access for $SERVICE_USER..."
+    
+    local sudoers_file="/etc/sudoers.d/$SERVICE_NAME"
+    
+    cat > "$sudoers_file" << EOF
+# Limited sudo access for $SERVICE_NAME
+Cmnd_Alias APIMONITOR_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/chgrp, /bin/touch
+Cmnd_Alias APIMONITOR_SCRIPTS = /bin/bash $INSTALL_PATH/scripts/*, /usr/bin/bash $INSTALL_PATH/scripts/*, /bin/bash $INSTALL_PATH/scripts/*.sh, /usr/bin/bash $INSTALL_PATH/scripts/*.sh
+Cmnd_Alias APIMONITOR_SERVICE = /bin/systemctl restart $SERVICE_NAME, /bin/systemctl status $SERVICE_NAME
+
+$SERVICE_USER ALL=(ALL) NOPASSWD: APIMONITOR_FILE_OPS
+$SERVICE_USER ALL=(ALL) NOPASSWD: APIMONITOR_SCRIPTS
+$SERVICE_USER ALL=(ALL) NOPASSWD: APIMONITOR_SERVICE
+EOF
+    
+    # Set correct permissions (CRITICAL)
+    chmod 440 "$sudoers_file"
+    
+    # Validate syntax
+    if visudo -c -f "$sudoers_file" &>/dev/null; then
+        log_info "Limited sudo access configured: $sudoers_file"
+    else
+        log_error "Invalid sudoers syntax, removing file"
+        rm -f "$sudoers_file"
+        log_warn "Service will run without sudo access"
+    fi
+}
+
 # Main installation process
 main() {
     echo -e "${GREEN}=== APIMonitorWorkerService Linux Installation ===${NC}"
@@ -556,6 +586,7 @@ main() {
     create_systemd_service
     create_startup_script
     setup_log_rotation
+    setup_sudo_access
     create_deployment_guide
 
     echo ""

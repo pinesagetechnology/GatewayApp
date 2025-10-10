@@ -346,7 +346,7 @@ RestartSec=10
 Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=ASPNETCORE_URLS=http://localhost:$API_PORT
-NoNewPrivileges=true
+# NoNewPrivileges disabled to allow sudo usage for permission scripts
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=false
@@ -547,6 +547,38 @@ EOF
   log "Deployment guide created: $INSTALL_PATH/DEPLOYMENT_GUIDE.txt"
 }
 
+# Function to setup limited sudo access
+setup_limited_sudo_access() {
+  step "Configuring limited sudo access for $SERVICE_USER..."
+  
+  local sudoers_file="/etc/sudoers.d/$SERVICE_NAME"
+  
+  cat > "$sudoers_file" <<EOF
+# Limited sudo access for monitoringapi
+Cmnd_Alias MONITORING_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/chgrp, /bin/touch
+Cmnd_Alias MONITORING_SCRIPTS = /bin/bash $INSTALL_PATH/scripts/*, /usr/bin/bash $INSTALL_PATH/scripts/*, /bin/bash $INSTALL_PATH/scripts/*.sh, /usr/bin/bash $INSTALL_PATH/scripts/*.sh
+Cmnd_Alias MONITORING_USER_MGT = /usr/sbin/usermod -a -G monitor-services *
+Cmnd_Alias MONITORING_SERVICES = /bin/systemctl restart apimonitor, /bin/systemctl restart filemonitor, /bin/systemctl restart monitoringapi, /bin/systemctl status *
+
+$SERVICE_USER ALL=(ALL) NOPASSWD: MONITORING_FILE_OPS
+$SERVICE_USER ALL=(ALL) NOPASSWD: MONITORING_SCRIPTS
+$SERVICE_USER ALL=(ALL) NOPASSWD: MONITORING_USER_MGT
+$SERVICE_USER ALL=(ALL) NOPASSWD: MONITORING_SERVICES
+EOF
+  
+  # Set correct permissions (CRITICAL)
+  chmod 440 "$sudoers_file"
+  
+  # Validate syntax
+  if visudo -c -f "$sudoers_file" &>/dev/null; then
+    log "Limited sudo access configured: $sudoers_file"
+  else
+    err "Invalid sudoers syntax, removing file"
+    rm -f "$sudoers_file"
+    warn "Service will run without sudo access"
+  fi
+}
+
 main() {
   echo -e "${GREEN}========================================${NC}"
   echo -e "${GREEN}    MonitoringServiceAPI Main Installer${NC}"
@@ -607,6 +639,9 @@ main() {
   else
     warn "Permission fix script not found at: $INSTALL_PATH/scripts/fix-monitored-folder-permissions.sh"
   fi
+  
+  # Configure limited sudo access for MonitoringServiceAPI
+  setup_limited_sudo_access
   
   echo ""
   echo -e "${GREEN}========================================${NC}"
