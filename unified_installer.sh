@@ -526,35 +526,15 @@ configure_sudo_access() {
         return 0
     fi
     
-    header "Step 6: Configuring Limited Sudo Access"
+    header "Configuring Sudo Access for Services"
     
-    info "Granting limited sudo privileges to service users..."
-    info "This allows services to create/delete/move files and run scripts"
-    echo ""
+    local sudo_script="$SCRIPT_DIR/services_sudo_fix.sh"
     
-    # Check if grant script exists
-    local sudo_script="$SCRIPT_DIR/grant_limited_sudo_access.sh"
-    
-    if [ ! -f "$sudo_script" ]; then
-        warn "Sudo configuration script not found: $sudo_script"
-        warn "Services will be installed without sudo access"
-        warn "You can configure sudo later by running:"
-        warn "  sudo bash grant_limited_sudo_access.sh"
-        return 0
-    fi
-    
-    # Make script executable
-    chmod +x "$sudo_script"
-    
-    # Run the sudo configuration script
-    if bash "$sudo_script"; then
-        log "Sudo access configured successfully"
+    if [ -f "$sudo_script" ]; then
+        execute_command "bash \"$sudo_script\"" "Configure sudo access for monitoringapi"
     else
-        warn "Sudo configuration had issues, but continuing..."
-        warn "Services may not have sudo access"
+        warn "Sudo configuration script not found: $sudo_script"
     fi
-    
-    echo ""
 }
 
 # Step 7: Fix database permissions
