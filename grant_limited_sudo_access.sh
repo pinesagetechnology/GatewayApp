@@ -70,45 +70,16 @@ create_sudoers_config() {
         return 0
     fi
     
-    # Create sudoers configuration
+    # Create sudoers configuration - Simple format that works
     cat > "$sudoers_file" << EOF
 # Limited sudo access for ${service_name}
-# Allows ${service_user} to perform file/folder operations and run monitoring scripts
+Cmnd_Alias ${service_name^^}_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/chgrp, /bin/touch
+Cmnd_Alias ${service_name^^}_SCRIPTS = /bin/bash ${install_path}/scripts/*, /usr/bin/bash ${install_path}/scripts/*, /bin/bash ${install_path}/scripts/*.sh, /usr/bin/bash ${install_path}/scripts/*.sh
+Cmnd_Alias ${service_name^^}_SERVICE = /bin/systemctl restart ${service_name}, /bin/systemctl status ${service_name}
 
-# File and directory operations
-${service_user} ALL=(ALL) NOPASSWD: /bin/mkdir *
-${service_user} ALL=(ALL) NOPASSWD: /bin/rm *
-${service_user} ALL=(ALL) NOPASSWD: /bin/rmdir *
-${service_user} ALL=(ALL) NOPASSWD: /bin/mv *
-${service_user} ALL=(ALL) NOPASSWD: /bin/cp *
-
-# Permission management
-${service_user} ALL=(ALL) NOPASSWD: /bin/chmod *
-${service_user} ALL=(ALL) NOPASSWD: /bin/chown *
-${service_user} ALL=(ALL) NOPASSWD: /bin/chgrp *
-
-# Touch files
-${service_user} ALL=(ALL) NOPASSWD: /bin/touch *
-
-# Run shell scripts (restricted to specific paths - both absolute and relative)
-# Allow with full paths to bash
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash ${install_path}/scripts/*
-${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash ${install_path}/scripts/*
-${service_user} ALL=(ALL) NOPASSWD: /bin/sh ${install_path}/scripts/*
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash scripts/*
-${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*
-# Also allow without full path (when bash is resolved via PATH)
-${service_user} ALL=(ALL) NOPASSWD: bash ${install_path}/scripts/*
-${service_user} ALL=(ALL) NOPASSWD: bash scripts/*
-
-# Allow running scripts from monitored folders (for processing)
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash /var/${service_name}/*
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash /home/*/workspace/*
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash /home/*/monitored/*
-
-# Service management (only for restarting own service)
-${service_user} ALL=(ALL) NOPASSWD: /bin/systemctl restart ${service_name}
-${service_user} ALL=(ALL) NOPASSWD: /bin/systemctl status ${service_name}
+${service_user} ALL=(ALL) NOPASSWD: ${service_name^^}_FILE_OPS
+${service_user} ALL=(ALL) NOPASSWD: ${service_name^^}_SCRIPTS
+${service_user} ALL=(ALL) NOPASSWD: ${service_name^^}_SERVICE
 EOF
     
     # Set correct permissions (CRITICAL)
@@ -144,42 +115,15 @@ create_monitoringapi_sudoers() {
     # Create sudoers configuration (MonitoringAPI needs access to permission scripts)
     cat > "$sudoers_file" << EOF
 # Limited sudo access for monitoringapi
-# Allows monitoringapi to perform file/folder operations, run scripts, and manage permissions
+Cmnd_Alias MONITORING_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/chgrp, /bin/touch
+Cmnd_Alias MONITORING_SCRIPTS = /bin/bash ${install_path}/scripts/*, /usr/bin/bash ${install_path}/scripts/*, /bin/bash ${install_path}/scripts/*.sh, /usr/bin/bash ${install_path}/scripts/*.sh
+Cmnd_Alias MONITORING_USER_MGT = /usr/sbin/usermod -a -G monitor-services *
+Cmnd_Alias MONITORING_SERVICES = /bin/systemctl restart apimonitor, /bin/systemctl restart filemonitor, /bin/systemctl restart monitoringapi, /bin/systemctl status *
 
-# File and directory operations
-${service_user} ALL=(ALL) NOPASSWD: /bin/mkdir *
-${service_user} ALL=(ALL) NOPASSWD: /bin/rm *
-${service_user} ALL=(ALL) NOPASSWD: /bin/rmdir *
-${service_user} ALL=(ALL) NOPASSWD: /bin/mv *
-${service_user} ALL=(ALL) NOPASSWD: /bin/cp *
-
-# Permission management (for fixing monitored folder permissions)
-${service_user} ALL=(ALL) NOPASSWD: /bin/chmod *
-${service_user} ALL=(ALL) NOPASSWD: /bin/chown *
-${service_user} ALL=(ALL) NOPASSWD: /bin/chgrp *
-
-# Touch files
-${service_user} ALL=(ALL) NOPASSWD: /bin/touch *
-
-# Run shell scripts (own scripts + permission fix scripts - both absolute and relative)
-# Allow with full paths to bash
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash ${install_path}/scripts/*
-${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash ${install_path}/scripts/*
-${service_user} ALL=(ALL) NOPASSWD: /bin/sh ${install_path}/scripts/*
-${service_user} ALL=(ALL) NOPASSWD: /bin/bash scripts/*
-${service_user} ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*
-# Also allow without full path (when bash is resolved via PATH)
-${service_user} ALL=(ALL) NOPASSWD: bash ${install_path}/scripts/*
-${service_user} ALL=(ALL) NOPASSWD: bash scripts/*
-
-# User management (for adding users to monitor-services group)
-${service_user} ALL=(ALL) NOPASSWD: /usr/sbin/usermod -a -G monitor-services *
-
-# Service management (can restart all monitoring services)
-${service_user} ALL=(ALL) NOPASSWD: /bin/systemctl restart apimonitor
-${service_user} ALL=(ALL) NOPASSWD: /bin/systemctl restart filemonitor
-${service_user} ALL=(ALL) NOPASSWD: /bin/systemctl restart monitoringapi
-${service_user} ALL=(ALL) NOPASSWD: /bin/systemctl status *
+${service_user} ALL=(ALL) NOPASSWD: MONITORING_FILE_OPS
+${service_user} ALL=(ALL) NOPASSWD: MONITORING_SCRIPTS
+${service_user} ALL=(ALL) NOPASSWD: MONITORING_USER_MGT
+${service_user} ALL=(ALL) NOPASSWD: MONITORING_SERVICES
 EOF
     
     # Set correct permissions (CRITICAL)

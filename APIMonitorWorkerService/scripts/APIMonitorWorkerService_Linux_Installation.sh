@@ -510,42 +510,13 @@ setup_sudo_access() {
     
     cat > "$sudoers_file" << EOF
 # Limited sudo access for $SERVICE_NAME
-# Allows $SERVICE_USER to perform file/folder operations and run monitoring scripts
+Cmnd_Alias APIMONITOR_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/chgrp, /bin/touch
+Cmnd_Alias APIMONITOR_SCRIPTS = /bin/bash $INSTALL_PATH/scripts/*, /usr/bin/bash $INSTALL_PATH/scripts/*, /bin/bash $INSTALL_PATH/scripts/*.sh, /usr/bin/bash $INSTALL_PATH/scripts/*.sh
+Cmnd_Alias APIMONITOR_SERVICE = /bin/systemctl restart $SERVICE_NAME, /bin/systemctl status $SERVICE_NAME
 
-# File and directory operations
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mkdir *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rm *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rmdir *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mv *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/cp *
-
-# Permission management
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chmod *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chown *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chgrp *
-
-# Touch files
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/touch *
-
-# Run shell scripts (restricted to specific paths - both absolute and relative)
-# Allow with full paths to bash
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash $INSTALL_PATH/scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $INSTALL_PATH/scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/sh $INSTALL_PATH/scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*
-# Also allow without full path (when bash is resolved via PATH)
-$SERVICE_USER ALL=(ALL) NOPASSWD: bash $INSTALL_PATH/scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: bash scripts/*
-
-# Allow running scripts from monitored folders
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash /var/$SERVICE_NAME/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash /home/*/workspace/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash /home/*/monitored/*
-
-# Service management (only for own service)
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart $SERVICE_NAME
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl status $SERVICE_NAME
+$SERVICE_USER ALL=(ALL) NOPASSWD: APIMONITOR_FILE_OPS
+$SERVICE_USER ALL=(ALL) NOPASSWD: APIMONITOR_SCRIPTS
+$SERVICE_USER ALL=(ALL) NOPASSWD: APIMONITOR_SERVICE
 EOF
     
     # Set correct permissions (CRITICAL)

@@ -555,42 +555,15 @@ setup_limited_sudo_access() {
   
   cat > "$sudoers_file" <<EOF
 # Limited sudo access for monitoringapi
-# Allows monitoringapi to perform file/folder operations, run scripts, and manage permissions
+Cmnd_Alias MONITORING_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/chgrp, /bin/touch
+Cmnd_Alias MONITORING_SCRIPTS = /bin/bash $INSTALL_PATH/scripts/*, /usr/bin/bash $INSTALL_PATH/scripts/*, /bin/bash $INSTALL_PATH/scripts/*.sh, /usr/bin/bash $INSTALL_PATH/scripts/*.sh
+Cmnd_Alias MONITORING_USER_MGT = /usr/sbin/usermod -a -G monitor-services *
+Cmnd_Alias MONITORING_SERVICES = /bin/systemctl restart apimonitor, /bin/systemctl restart filemonitor, /bin/systemctl restart monitoringapi, /bin/systemctl status *
 
-# File and directory operations
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mkdir *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rm *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/rmdir *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/mv *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/cp *
-
-# Permission management (for fixing monitored folder permissions)
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chmod *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chown *
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/chgrp *
-
-# Touch files
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/touch *
-
-# Run shell scripts (own scripts + permission fix scripts - both absolute and relative)
-# Allow with full paths to bash
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash $INSTALL_PATH/scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash $INSTALL_PATH/scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/sh $INSTALL_PATH/scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/bash scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/bash scripts/*
-# Also allow without full path (when bash is resolved via PATH)
-$SERVICE_USER ALL=(ALL) NOPASSWD: bash $INSTALL_PATH/scripts/*
-$SERVICE_USER ALL=(ALL) NOPASSWD: bash scripts/*
-
-# User management (for adding users to monitor-services group)
-$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/sbin/usermod -a -G monitor-services *
-
-# Service management (can restart all monitoring services)
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart apimonitor
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart filemonitor
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart monitoringapi
-$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl status *
+$SERVICE_USER ALL=(ALL) NOPASSWD: MONITORING_FILE_OPS
+$SERVICE_USER ALL=(ALL) NOPASSWD: MONITORING_SCRIPTS
+$SERVICE_USER ALL=(ALL) NOPASSWD: MONITORING_USER_MGT
+$SERVICE_USER ALL=(ALL) NOPASSWD: MONITORING_SERVICES
 EOF
   
   # Set correct permissions (CRITICAL)
