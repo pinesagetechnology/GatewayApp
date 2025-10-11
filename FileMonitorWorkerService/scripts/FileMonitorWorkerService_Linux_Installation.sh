@@ -336,7 +336,7 @@ create_directories() {
     # Set permissions - database directory needs group write for SQLite WAL/SHM files
     chmod 755 "$INSTALL_PATH"
     chmod 755 "$DATA_PATH"
-    chmod 775 "$DATA_PATH/database"  # Group write for shared access
+    chmod 2775 "$DATA_PATH/database"  # Group write + setgid bit (new files inherit group)
     chmod 755 "$DATA_PATH/logs"
     chmod 755 "$DATA_PATH/config"
     chmod 755 "$DATA_PATH/temp"

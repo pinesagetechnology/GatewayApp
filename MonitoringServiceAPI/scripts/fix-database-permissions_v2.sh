@@ -137,21 +137,25 @@ main() {
         chgrp -R "$SHARED_GROUP" "$data_path"
         log_info "Set group ownership to $SHARED_GROUP"
         
-        # Set directory permissions (775 = rwxrwxr-x)
-        chmod 775 "$data_path/database"
-        log_info "Set database directory permissions to 775"
+        # Set directory permissions with SETGID bit (2775 = rwxrwsr-x)
+        # SETGID ensures new files inherit the group ownership
+        chmod 2775 "$data_path/database"
+        log_info "Set database directory permissions to 2775 (with setgid bit)"
         
-        # Set database file permissions (664 = rw-rw-r--)
+        # Set database file permissions (664 = rw-rw-r--) and group ownership
         if ls "$data_path/database/"*.db 1> /dev/null 2>&1; then
+            chgrp "$SHARED_GROUP" "$data_path/database/"*.db
             chmod 664 "$data_path/database/"*.db
             log_info "Set database file permissions to 664"
             
             # Also fix WAL and SHM files if they exist
             if ls "$data_path/database/"*.db-wal 1> /dev/null 2>&1; then
+                chgrp "$SHARED_GROUP" "$data_path/database/"*.db-wal
                 chmod 664 "$data_path/database/"*.db-wal
                 log_info "Fixed WAL file permissions"
             fi
             if ls "$data_path/database/"*.db-shm 1> /dev/null 2>&1; then
+                chgrp "$SHARED_GROUP" "$data_path/database/"*.db-shm
                 chmod 664 "$data_path/database/"*.db-shm
                 log_info "Fixed SHM file permissions"
             fi
