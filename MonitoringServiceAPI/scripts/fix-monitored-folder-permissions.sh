@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
 # Fix Monitored Folder Permissions for Monitoring Services
-# This script sets up proper permissions for a monitored folder so that
-# FileMonitorWorkerService and APIMonitorWorkerService can access it.
+# This script sets up full access permissions for a monitored folder so that
+# ALL users (FileMonitor, APIMonitor, and any other user) can access it.
 
 set -e  # Exit on any error
 
 # Configuration
-SHARED_GROUP="monitor-services"
 MONITORED_FOLDER=""
 OWNER_USER=""
 VERBOSE=false
@@ -66,7 +65,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -h|--help)
-            echo "Fix Monitored Folder Permissions for Monitoring Services"
+            echo "Fix Monitored Folder Permissions - Full Access for Everyone"
             echo ""
             echo "Usage: sudo $0 [options]"
             echo ""
@@ -78,13 +77,12 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "This script:"
             echo "  1. Ensures the monitored folder exists"
-            echo "  2. Sets proper group ownership (monitor-services)"
-            echo "  3. Sets appropriate permissions for read/write access"
-            echo "  4. Ensures service users can access the folder"
+            echo "  2. Sets full access permissions (777) - everyone can read/write/execute"
+            echo "  3. No user/group restrictions"
             echo ""
             echo "Example:"
-            echo "  sudo $0 --folder /home/username/workspace/monitored"
-            echo "  sudo $0 --folder /home/username/workspace/monitored --owner username"
+            echo "  sudo $0 --folder /home/pi/workspace/monitored"
+            echo "  sudo $0 --folder /home/pi/workspace/monitored --owner pi"
             exit 0
             ;;
         *)
@@ -132,7 +130,7 @@ fi
 
 # Main fix process
 main() {
-    echo -e "${GREEN}=== Fix Monitored Folder Permissions ===${NC}"
+    echo -e "${GREEN}=== Setup Monitored Folder - Full Access ===${NC}"
     echo ""
     
     check_root
@@ -143,54 +141,24 @@ main() {
     else
         echo "Owner user: (will use current owner)"
     fi
-    echo "Shared group: $SHARED_GROUP"
+    echo "Access: Full access for all users (777)"
     echo ""
     
-    # Step 1: Ensure shared group exists
-    log_step "Ensuring shared group exists..."
-    if ! getent group "$SHARED_GROUP" &>/dev/null; then
-        groupadd "$SHARED_GROUP"
-        log_info "Created shared group: $SHARED_GROUP"
-    else
-        log_info "Shared group already exists"
-    fi
-    echo ""
-    
-    # Step 2: Add owner to shared group (if owner is specified and exists)
-    if [ -n "$OWNER_USER" ] && id "$OWNER_USER" &>/dev/null; then
-        log_step "Adding owner to shared group..."
-        usermod -a -G "$SHARED_GROUP" "$OWNER_USER"
-        log_info "Added $OWNER_USER to $SHARED_GROUP"
-        echo ""
-    elif [ -n "$OWNER_USER" ]; then
-        log_warn "Owner user $OWNER_USER does not exist"
-        echo ""
-    fi
-    
-    # Step 3: Ensure parent directories exist and are accessible
-    log_step "Ensuring parent directories exist and are accessible..."
+    # Step 1: Ensure parent directories exist and are accessible
+    log_step "Ensuring parent directories exist..."
     parent_dir=$(dirname "$MONITORED_FOLDER")
     if [ ! -d "$parent_dir" ]; then
         log_warn "Parent directory does not exist: $parent_dir"
         log_info "Creating parent directories..."
-        
-        # Create parent directories with appropriate permissions
-        if [ -n "$OWNER_USER" ] && id "$OWNER_USER" &>/dev/null; then
-            mkdir -p "$parent_dir"
-            chown "$OWNER_USER:$SHARED_GROUP" "$parent_dir"
-            chmod 775 "$parent_dir"
-            log_info "Created parent directory: $parent_dir"
-        else
-            mkdir -p "$parent_dir"
-            chgrp "$SHARED_GROUP" "$parent_dir"
-            chmod 775 "$parent_dir"
-            log_info "Created parent directory: $parent_dir"
-        fi
+        mkdir -p "$parent_dir"
+        chmod 777 "$parent_dir"
+        log_info "Created parent directory with full access: $parent_dir"
     else
         log_info "Parent directory exists: $parent_dir"
     fi
+    echo ""
     
-    # Step 4: Create monitored folder if it doesn't exist
+    # Step 2: Create monitored folder if it doesn't exist
     log_step "Ensuring monitored folder exists..."
     if [ ! -d "$MONITORED_FOLDER" ]; then
         mkdir -p "$MONITORED_FOLDER"
@@ -200,42 +168,38 @@ main() {
     fi
     echo ""
     
-    # Step 5: Set proper ownership and permissions
-    log_step "Setting ownership and permissions..."
+    # Step 3: Set full access permissions for everyone
+    log_step "Setting full access permissions..."
     
-    # Set ownership (owner:monitor-services)
+    # Set ownership to current user if specified
     if [ -n "$OWNER_USER" ] && id "$OWNER_USER" &>/dev/null; then
-        chown -R "$OWNER_USER:$SHARED_GROUP" "$MONITORED_FOLDER"
-        log_info "Set ownership to $OWNER_USER:$SHARED_GROUP"
-    else
-        # Keep current owner, but change group to monitor-services
-        chgrp -R "$SHARED_GROUP" "$MONITORED_FOLDER"
-        log_info "Set group ownership to $SHARED_GROUP"
+        chown -R "$OWNER_USER" "$MONITORED_FOLDER"
+        log_info "Set ownership to $OWNER_USER"
     fi
     
-    # Set directory permissions (775 = rwxrwxr-x)
-    find "$MONITORED_FOLDER" -type d -exec chmod 775 {} \;
-    log_info "Set directory permissions to 775"
+    # Set directory permissions (777 = rwxrwxrwx - everyone can read/write/execute)
+    find "$MONITORED_FOLDER" -type d -exec chmod 777 {} \;
+    log_info "Set directory permissions to 777 (full access for all users)"
     
-    # Set file permissions (664 = rw-rw-r--)
-    find "$MONITORED_FOLDER" -type f -exec chmod 664 {} \;
-    log_info "Set file permissions to 664"
+    # Set file permissions (666 = rw-rw-rw- - everyone can read/write)
+    find "$MONITORED_FOLDER" -type f -exec chmod 666 {} \;
+    log_info "Set file permissions to 666 (read/write for all users)"
     
     # Set special permissions for executable files if any
-    find "$MONITORED_FOLDER" -type f -name "*.sh" -exec chmod 775 {} \; 2>/dev/null || true
-    find "$MONITORED_FOLDER" -type f -name "*.exe" -exec chmod 775 {} \; 2>/dev/null || true
-    find "$MONITORED_FOLDER" -type f -name "*.bin" -exec chmod 775 {} \; 2>/dev/null || true
+    find "$MONITORED_FOLDER" -type f -name "*.sh" -exec chmod 777 {} \; 2>/dev/null || true
+    find "$MONITORED_FOLDER" -type f -name "*.exe" -exec chmod 777 {} \; 2>/dev/null || true
+    find "$MONITORED_FOLDER" -type f -name "*.bin" -exec chmod 777 {} \; 2>/dev/null || true
     log_info "Set executable permissions for script files"
     
     echo ""
     
-    # Step 6: Ensure parent directories are accessible
+    # Step 4: Ensure parent directories are accessible
     log_step "Checking parent directory permissions..."
     current_dir="$MONITORED_FOLDER"
     while [ "$current_dir" != "/" ]; do
         parent_dir=$(dirname "$current_dir")
         
-        # Check if the parent directory allows group access
+        # Check if the parent directory allows access
         if [ -d "$parent_dir" ]; then
             parent_perms=$(stat -c '%a' "$parent_dir" 2>/dev/null || echo "000")
             verbose_log "Checking $parent_dir (permissions: $parent_perms)"
@@ -244,7 +208,7 @@ main() {
             # Extract the last digit (others permissions)
             others_perm="${parent_perms: -1}"
             
-            # If others don't have execute permission (last digit is 0,2,4,6), we need to fix it
+            # If others don't have execute permission (last digit is 0,2,4,6), add it
             if [[ "$others_perm" =~ ^[0246]$ ]]; then
                 log_warn "Parent directory $parent_dir lacks execute permission for others ($parent_perms)"
                 
@@ -271,83 +235,32 @@ main() {
     done
     echo ""
     
-    # Step 7: Verify and add service users to shared group
-    log_step "Ensuring service users are in shared group..."
-    
-    for service_user in apimonitor filemonitor; do
-        if id "$service_user" &>/dev/null; then
-            if groups "$service_user" | grep -q "$SHARED_GROUP"; then
-                log_info "$service_user is already in $SHARED_GROUP"
-            else
-                usermod -a -G "$SHARED_GROUP" "$service_user"
-                log_info "Added $service_user to $SHARED_GROUP"
-            fi
-        else
-            log_warn "Service user $service_user does not exist"
-        fi
-    done
-    echo ""
-    
-    # Step 8: Restart services to apply group membership
-    log_step "Restarting monitoring services..."
-    
-    for service in apimonitor filemonitor; do
-        if systemctl is-enabled "$service" &>/dev/null; then
-            if systemctl restart "$service"; then
-                log_info "Restarted $service"
-            else
-                log_warn "Failed to restart $service (check service status)"
-            fi
-        else
-            log_warn "Service $service not found or not enabled"
-        fi
-    done
-    echo ""
-    
-    # Step 9: Verify access
+    # Step 5: Verify access
     log_step "Verifying access..."
     
     # Test if services can access the folder
     if [ -d "$MONITORED_FOLDER" ]; then
-        # Test read access
-        if sudo -u filemonitor test -r "$MONITORED_FOLDER"; then
-            log_info "FileMonitor service can read the folder"
-        else
-            log_warn "FileMonitor service cannot read the folder"
-        fi
-        
-        # Test write access
-        if sudo -u filemonitor test -w "$MONITORED_FOLDER"; then
-            log_info "FileMonitor service can write to the folder"
-        else
-            log_warn "FileMonitor service cannot write to the folder"
-        fi
-        
-        # Test read access for APIMonitor
-        if sudo -u apimonitor test -r "$MONITORED_FOLDER"; then
-            log_info "APIMonitor service can read the folder"
-        else
-            log_warn "APIMonitor service cannot read the folder"
-        fi
-        
-        # Test write access for APIMonitor
-        if sudo -u apimonitor test -w "$MONITORED_FOLDER"; then
-            log_info "APIMonitor service can write to the folder"
-        else
-            log_warn "APIMonitor service cannot write to the folder"
-        fi
+        # Test as different users if they exist
+        for test_user in filemonitor apimonitor; do
+            if id "$test_user" &>/dev/null; then
+                if sudo -u "$test_user" test -r "$MONITORED_FOLDER" && sudo -u "$test_user" test -w "$MONITORED_FOLDER"; then
+                    log_info "User '$test_user' can read and write to the folder"
+                else
+                    log_warn "User '$test_user' may have access issues"
+                fi
+            fi
+        done
     else
         log_error "Monitored folder does not exist: $MONITORED_FOLDER"
     fi
     echo ""
     
     # Summary
-    echo -e "${GREEN}=== Fix Complete ===${NC}"
+    echo -e "${GREEN}=== Setup Complete ===${NC}"
     echo ""
     echo "Monitored folder: $MONITORED_FOLDER"
     echo "Owner: ${OWNER_USER:-$(stat -c '%U' "$MONITORED_FOLDER" 2>/dev/null || echo "unknown")}"
-    echo "Group: $SHARED_GROUP"
-    echo "Permissions: 775 (directories), 664 (files)"
+    echo "Permissions: 777 (directories - full access), 666 (files - read/write for all)"
     echo ""
     
     # Show actual permissions
@@ -357,25 +270,13 @@ main() {
         echo ""
     fi
     
-    # Show group memberships
-    echo "Service user group memberships:"
-    for service_user in apimonitor filemonitor; do
-        if id "$service_user" &>/dev/null; then
-            echo "  $service_user: $(groups $service_user 2>/dev/null || echo 'unknown')"
-        fi
-    done
+    echo "ALL users can now:"
+    echo "  ✓ Read files from the monitored folder"
+    echo "  ✓ Write files to the monitored folder"
+    echo "  ✓ Create/delete subdirectories and files"
+    echo "  ✓ Execute scripts in the folder"
     echo ""
-    
-    echo "Services should now be able to:"
-    echo "  - Read files from the monitored folder"
-    echo "  - Write API responses to the monitored folder"
-    echo "  - Create subdirectories as needed"
-    echo ""
-    echo "To verify:"
-    echo "  sudo systemctl status filemonitor"
-    echo "  sudo systemctl status apimonitor"
-    echo "  sudo journalctl -u filemonitor -n 20"
-    echo "  sudo journalctl -u apimonitor -n 20"
+    echo "No restrictions - everyone has full access!"
 }
 
 # Run main function with all arguments

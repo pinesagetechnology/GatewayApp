@@ -70,10 +70,10 @@ create_sudoers_config() {
         return 0
     fi
     
-    # Create sudoers configuration - Simple format that works
+    # Create sudoers configuration - Simplified (no groups needed)
     cat > "$sudoers_file" << EOF
 # Limited sudo access for ${service_name}
-Cmnd_Alias ${service_name^^}_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/chgrp, /bin/touch
+Cmnd_Alias ${service_name^^}_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/touch
 Cmnd_Alias ${service_name^^}_SCRIPTS = /bin/bash ${install_path}/scripts/*, /usr/bin/bash ${install_path}/scripts/*, /bin/bash ${install_path}/scripts/*.sh, /usr/bin/bash ${install_path}/scripts/*.sh
 Cmnd_Alias ${service_name^^}_SERVICE = /bin/systemctl restart ${service_name}, /bin/systemctl status ${service_name}
 
@@ -112,32 +112,21 @@ create_monitoringapi_sudoers() {
         return 0
     fi
     
-    # Create sudoers configuration (MonitoringAPI needs access to permission scripts)
-    # Note: Must support script execution from WorkingDirectory with relative paths
+    # Create sudoers configuration (MonitoringAPI needs access to create folders)
+    # Simplified: No groups, just create folders with 777 permissions
     # The service calls: sudo /bin/bash scripts/fix-monitored-folder-permissions.sh --folder ...
     cat > "$sudoers_file" << EOF
-# Limited sudo access for monitoringapi
-# File operations that the permission script needs
-Cmnd_Alias MONITORING_FILE_OPS = /bin/mkdir, /bin/rm, /bin/rmdir, /bin/mv, /bin/cp, /bin/chmod, /bin/chown, /bin/chgrp, /bin/touch, /usr/bin/find
+# Limited sudo access for monitoringapi - Simplified for full access folders
+# File operations needed to create folders and set 777 permissions
+Cmnd_Alias MONITORING_FILE_OPS = /bin/mkdir, /bin/chmod, /bin/chown, /usr/bin/find
 
 # Script execution - allow bash to run permission scripts with any arguments
 # The asterisk (*) at the end allows passing arguments like --folder "/path"
-Cmnd_Alias MONITORING_SCRIPTS = /bin/bash ${install_path}/scripts/fix-monitored-folder-permissions.sh *, /usr/bin/bash ${install_path}/scripts/fix-monitored-folder-permissions.sh *, /bin/bash scripts/fix-monitored-folder-permissions.sh *, /usr/bin/bash scripts/fix-monitored-folder-permissions.sh *, /bin/bash ${install_path}/scripts/fix-database-permissions_v2.sh *, /usr/bin/bash ${install_path}/scripts/fix-database-permissions_v2.sh *
-
-# User management for adding users to monitor-services group
-Cmnd_Alias MONITORING_USER_MGT = /usr/sbin/usermod, /usr/sbin/groupadd, /usr/bin/getent
-
-# Service management
-Cmnd_Alias MONITORING_SERVICES = /bin/systemctl restart apimonitor, /bin/systemctl restart filemonitor, /bin/systemctl restart monitoringapi, /bin/systemctl status apimonitor, /bin/systemctl status filemonitor, /bin/systemctl status monitoringapi, /bin/systemctl is-enabled apimonitor, /bin/systemctl is-enabled filemonitor, /usr/bin/systemctl restart apimonitor, /usr/bin/systemctl restart filemonitor, /usr/bin/systemctl restart monitoringapi, /usr/bin/systemctl status apimonitor, /usr/bin/systemctl status filemonitor, /usr/bin/systemctl status monitoringapi, /usr/bin/systemctl is-enabled apimonitor, /usr/bin/systemctl is-enabled filemonitor
+Cmnd_Alias MONITORING_SCRIPTS = /bin/bash ${install_path}/scripts/fix-monitored-folder-permissions.sh *, /usr/bin/bash ${install_path}/scripts/fix-monitored-folder-permissions.sh *, /bin/bash scripts/fix-monitored-folder-permissions.sh *, /usr/bin/bash scripts/fix-monitored-folder-permissions.sh *
 
 # Grant permissions with NOPASSWD
 ${service_user} ALL=(ALL) NOPASSWD: MONITORING_FILE_OPS
 ${service_user} ALL=(ALL) NOPASSWD: MONITORING_SCRIPTS
-${service_user} ALL=(ALL) NOPASSWD: MONITORING_USER_MGT
-${service_user} ALL=(ALL) NOPASSWD: MONITORING_SERVICES
-
-# Allow the service to run commands as other users for testing
-${service_user} ALL=(apimonitor,filemonitor) NOPASSWD: /usr/bin/test, /bin/test
 EOF
     
     # Set correct permissions (CRITICAL)
