@@ -145,7 +145,7 @@ namespace FileMonitorWorkerService.Data
                     new Configuration { Key = Constants.UploadMaxRetries, Value = "5", Category = "Upload", Description = "Max upload retries" },
                     new Configuration { Key = Constants.UploadRetryDelaySeconds, Value = "30", Category = "Upload", Description = "Initial upload retry delay (seconds)" },
                     new Configuration { Key = Constants.UploadArchiveOnSuccess, Value = "true", Category = "Upload", Description = "Archive file on successful upload" },
-                    new Configuration { Key = Constants.FileMonitorArchivePath, Value = "./", Category = "Upload", Description = "Path to archive uploaded files" },
+                    new Configuration { Key = Constants.FileMonitorArchivePath, Value = Constants.DefaultArchivePath, Category = "Upload", Description = "Path to archive uploaded files" },
                     new Configuration { Key = Constants.UploadDeleteOnSuccess, Value = "false", Category = "Upload", Description = "Delete file on successful upload" },
                     new Configuration { Key = Constants.UploadNotifyOnCompletion, Value = "false", Category = "Upload", Description = "Notify on successful upload" },
                     new Configuration { Key = Constants.UploadNotifyOnFailure, Value = "true", Category = "Upload", Description = "Notify on upload failure" },

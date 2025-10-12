@@ -300,7 +300,8 @@ show_installation_plan() {
     [ "$SKIP_MONITORING" = false ] && echo -e "  ${GREEN}5.${NC} Install MonitoringServiceAPI" || echo -e "  ${YELLOW}5.${NC} Install MonitoringServiceAPI (skipped)"
     [ "$SKIP_SUDO" = false ] && echo -e "  ${GREEN}6.${NC} Configure limited sudo access for services" || echo -e "  ${YELLOW}6.${NC} Configure sudo access (skipped)"
     [ "$SKIP_PERMISSIONS" = false ] && echo -e "  ${GREEN}7.${NC} Fix database permissions" || echo -e "  ${YELLOW}7.${NC} Fix database permissions (skipped)"
-    [ "$SKIP_REACT" = false ] && echo -e "  ${GREEN}8.${NC} Deploy React app" || echo -e "  ${YELLOW}8.${NC} Deploy React app (skipped)"
+    echo -e "  ${GREEN}8.${NC} Create shared archive folder (/var/gateway-archive)"
+    [ "$SKIP_REACT" = false ] && echo -e "  ${GREEN}9.${NC} Deploy React app" || echo -e "  ${YELLOW}9.${NC} Deploy React app (skipped)"
     
     echo ""
     echo -e "${CYAN}Source Paths:${NC}"
@@ -594,13 +595,109 @@ fix_database_permissions() {
     }
 }
 
-# Step 8: Deploy React app
+# Step 8: Create shared archive folder
+create_archive_folder() {
+    header "Step 8: Creating Shared Archive Folder"
+    
+    local ARCHIVE_PATH="/var/gateway-archive"
+    
+    info "Creating centralized archive folder for uploaded files"
+    info "Location: $ARCHIVE_PATH"
+    echo ""
+    
+    # Create the directory if it doesn't exist
+    if [ ! -d "$ARCHIVE_PATH" ]; then
+        if execute_command "mkdir -p \"$ARCHIVE_PATH\"" "Create archive directory"; then
+            log "Archive directory created: $ARCHIVE_PATH"
+        else
+            err "Failed to create archive directory"
+            return 1
+        fi
+    else
+        warn "Archive directory already exists: $ARCHIVE_PATH"
+    fi
+    
+    # Set ownership to root with a shared group
+    # Create a shared group for gateway services if it doesn't exist
+    if ! getent group gateway-archive >/dev/null 2>&1; then
+        if execute_command "groupadd gateway-archive" "Create gateway-archive group"; then
+            log "Created gateway-archive group"
+        else
+            warn "Failed to create gateway-archive group, using root:root ownership"
+        fi
+    fi
+    
+    # Add service users to the gateway-archive group
+    local service_users=("filemonitor" "apimonitor" "monitoringapi" "www-data")
+    for user in "${service_users[@]}"; do
+        if id "$user" >/dev/null 2>&1; then
+            if execute_command "usermod -aG gateway-archive \"$user\"" "Add $user to gateway-archive group"; then
+                verbose "Added $user to gateway-archive group"
+            else
+                warn "Failed to add $user to gateway-archive group"
+            fi
+        else
+            verbose "User $user does not exist, skipping"
+        fi
+    done
+    
+    # Set ownership to root:gateway-archive
+    if execute_command "chown root:gateway-archive \"$ARCHIVE_PATH\"" "Set archive folder ownership"; then
+        log "Set ownership to root:gateway-archive"
+    else
+        warn "Failed to set ownership, using default"
+    fi
+    
+    # Set permissions: 2775 (rwxrwsr-x)
+    # - Owner (root): read, write, execute
+    # - Group (gateway-archive): read, write, execute
+    # - Others: read, execute
+    # - Setgid bit (2): Files created inherit group ownership
+    if execute_command "chmod 2775 \"$ARCHIVE_PATH\"" "Set archive folder permissions"; then
+        log "Set permissions to 2775 (rwxrwsr-x with setgid)"
+    else
+        err "Failed to set permissions"
+        return 1
+    fi
+    
+    # Create a README file in the archive directory
+    cat > "$ARCHIVE_PATH/README.txt" << 'EOF'
+Gateway Archive Folder
+======================
+
+This folder is used by the File Monitor service to archive uploaded files.
+
+Location: /var/gateway-archive
+Permissions: 2775 (rwxrwsr-x with setgid bit)
+Group: gateway-archive
+
+All services in the gateway-archive group have read/write access to this folder.
+
+Files moved here retain their original names with timestamps prepended.
+
+EOF
+    
+    if [ -f "$ARCHIVE_PATH/README.txt" ]; then
+        execute_command "chmod 664 \"$ARCHIVE_PATH/README.txt\"" "Set README permissions"
+        log "Created README.txt in archive folder"
+    fi
+    
+    echo ""
+    info "Archive folder setup complete"
+    info "Path: $ARCHIVE_PATH"
+    info "Group: gateway-archive"
+    info "Permissions: 2775 (rwxrwsr-x)"
+    info "Service users with access: filemonitor, apimonitor, monitoringapi, www-data"
+    echo ""
+}
+
+# Step 9: Deploy React app
 deploy_react_app() {
     if [ "$SKIP_REACT" = true ]; then
         return 0
     fi
     
-    header "Step 8: Deploying React App"
+    header "Step 9: Deploying React App"
     
     # Look for the React deployment script in AzureGateway.UI/scripts directory
     local deploy_script="$WORKSPACE_BASE/AzureGateway.UI/scripts/rpi5-deploy.sh"
@@ -677,6 +774,12 @@ show_completion() {
     [ "$SKIP_APIMONITOR" = false ] && echo "  APIMonitor:  $APIMONITOR_DATA"
     
     echo ""
+    echo -e "${CYAN}Archive Folder:${NC}"
+    echo "  Location:    /var/gateway-archive"
+    echo "  Group:       gateway-archive"
+    echo "  Permissions: 2775 (rwxrwsr-x)"
+    
+    echo ""
     echo -e "${CYAN}Next Steps:${NC}"
     echo "  1. Start the services:"
     [ "$SKIP_FILEMONITOR" = false ] && echo "       sudo systemctl start filemonitor"
@@ -735,6 +838,7 @@ main() {
     install_monitoringapi
     configure_sudo_access
     fix_database_permissions
+    create_archive_folder
     deploy_react_app
     
     # Complete

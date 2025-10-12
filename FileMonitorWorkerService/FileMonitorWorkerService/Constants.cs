@@ -14,6 +14,8 @@
         public const string UploadNotifyOnFailure = "Upload.NotifyOnFailure";
         public const string AzureStorageConnectionString = "Azure.StorageConnectionString";
         public const string AzureDefaultContainer = "Azure.DefaultContainer";
-
+        
+        // Default paths - set by unified installer
+        public const string DefaultArchivePath = "/var/gateway-archive";
     }
 }
