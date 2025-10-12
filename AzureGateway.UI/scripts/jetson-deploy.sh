@@ -227,6 +227,19 @@ server {
         }
     }
 
+    # Vivotek push endpoint - third-party sends to /vivotek/push
+    location = /vivotek/push {
+        proxy_pass http://localhost:5000/Vivotek/push;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Content-Type $http_content_type;
+        proxy_read_timeout 300;
+        proxy_request_buffering off;
+    }
+
     # Proxy API requests to backend (adjust port if needed)
     location /api/ {
         proxy_pass http://localhost:5000;
