@@ -22,6 +22,8 @@ namespace MonitoringServiceAPI.Services
             services.AddTransient<IApiConfigurationService, ApiConfigurationService>();
             services.AddTransient<IAPIDataSourceService, APIDataSourceService>();
 
+            // Push server services
+            services.AddTransient<IPushServerSettingService, PushServerSettingService>();
             services.AddTransient<IVivotekService, VivotekService>();
 
             return services;

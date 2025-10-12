@@ -1,30 +1,57 @@
-﻿using System.Text.Json;
+﻿using FileMonitorWorkerService.Data.Repository;
+using Microsoft.Extensions.DependencyInjection;
+using MonitoringServiceAPI.Models;
 
 namespace MonitoringServiceAPI.Services
 {
     public interface IVivotekService
     {
         Task SaveRawDataAsync(string data);
+        Task<bool> IsEnabledAsync();
     }
 
     public class VivotekService : IVivotekService
     {
-        private readonly IConfiguration _configuration;
+        private readonly IRepository<PushServerSetting> _repository;
         private readonly ILogger<VivotekService> _logger;
-        public VivotekService(IConfiguration configuration, ILogger<VivotekService> logger)
+
+        public VivotekService(
+            [FromKeyedServices("file")] IRepository<PushServerSetting> repository,
+            ILogger<VivotekService> logger)
         {
-            _configuration = configuration;
+            _repository = repository;
             _logger = logger;
+        }
+
+        public async Task<bool> IsEnabledAsync()
+        {
+            var settings = await _repository.GetAllAsync();
+            var setting = settings.FirstOrDefault();
+            return setting?.IsEnabled ?? false;
         }
 
         public async Task SaveRawDataAsync(string data)
         {
             try
             {
-                var dataFolderPath = _configuration["VivotechStorage:DataFolderPath"];
+                var settings = await _repository.GetAllAsync();
+                var setting = settings.FirstOrDefault();
+
+                if (setting == null)
+                {
+                    throw new InvalidOperationException("PushServerSetting not found in database");
+                }
+
+                if (!setting.IsEnabled)
+                {
+                    _logger.LogWarning("Push server is disabled. Data not saved.");
+                    throw new InvalidOperationException("Push server is currently disabled");
+                }
+
+                var dataFolderPath = setting.DataFolderPath;
                 if (string.IsNullOrEmpty(dataFolderPath))
                 {
-                    throw new InvalidOperationException("DataStorage:DataFolderPath is not configured in appsettings.json");
+                    throw new InvalidOperationException("DataFolderPath is not configured in PushServerSetting");
                 }
 
                 // Ensure directory exists

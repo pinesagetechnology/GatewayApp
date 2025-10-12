@@ -17,6 +17,8 @@ namespace MonitoringServiceAPI.Data
 
         public DbSet<FileMonitorServiceHeartBeat> FileMonitorServiceHeartBeats { get; set; }
 
+        public DbSet<PushServerSetting> PushServerSettings { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

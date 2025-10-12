@@ -3,6 +3,7 @@ import { APIDataSourceConfig } from '@/models/APIDataSource';
 import { AzureStorageInfo } from '@/models/AzureStorageInfo';
 import { QueueItem, QueueSummary } from '@/models/UploadProcessor';
 import { Heartbeat } from '@/models/Heartbeat';
+import { PushServerSetting, UpdatePushServerSettingRequest, EnableServiceRequest, DisableServiceRequest } from '@/models/PushServerSetting';
 import axios, { AxiosResponse } from 'axios';
 import { CreateDataSourceRequest, UpdateDataSourceRequest, SetConfigRequest } from '@/models/Requests';
 import { ApiError } from '@/models/ApiError';
@@ -129,6 +130,16 @@ export const apiService = {
         apiClient.get('/api/Heartbeats/apiservice'),
     getFileServiceHeartbeat: (): Promise<AxiosResponse<Heartbeat>> =>
         apiClient.get('/api/Heartbeats/fileservice'),
+
+    // Push Server Settings endpoints
+    getPushServerSetting: (): Promise<AxiosResponse<PushServerSetting>> =>
+        apiClient.get('/api/PushServerSetting'),
+    updatePushServerSetting: (data: UpdatePushServerSettingRequest): Promise<AxiosResponse<PushServerSetting>> =>
+        apiClient.put('/api/PushServerSetting', data),
+    enablePushServer: (data?: EnableServiceRequest): Promise<AxiosResponse<PushServerSetting>> =>
+        apiClient.patch('/api/PushServerSetting/enable', data || {}),
+    disablePushServer: (data?: DisableServiceRequest): Promise<AxiosResponse<PushServerSetting>> =>
+        apiClient.patch('/api/PushServerSetting/disable', data || {}),
 };
 
 // Utility functions for API responses
