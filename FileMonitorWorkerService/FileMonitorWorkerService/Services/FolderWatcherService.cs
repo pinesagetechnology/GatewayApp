@@ -233,7 +233,9 @@ namespace FileMonitorWorkerService.Services
                     Status = FileStatus.Pending,
                     CreatedAt = DateTime.UtcNow,
                     Hash = hash,
-                    MaxRetries = 5
+                    MaxRetries = 5,
+                    DataSourceId = _config.Id,
+                    DataSourceName = _config.Name
                 };
 
                 await _repository.AddAsync(uploadEntry);

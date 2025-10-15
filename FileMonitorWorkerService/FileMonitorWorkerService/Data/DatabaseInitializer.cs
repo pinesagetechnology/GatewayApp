@@ -42,6 +42,9 @@ namespace FileMonitorWorkerService.Data
                 // Ensure all required tables exist
                 await EnsureAllTablesExistAsync(context, logger);
 
+                // Apply any schema updates for existing tables
+                await ApplySchemaUpdatesAsync(context, logger);
+
                 logger.LogInformation("Checking for existing data source configurations...");
                 var existingConfigs = await context.FileDataSourceConfigs.CountAsync();
                 logger.LogInformation("Found {Count} existing data source configurations", existingConfigs);
@@ -291,6 +294,8 @@ namespace FileMonitorWorkerService.Data
                         FileName TEXT NOT NULL,
                         FileType INTEGER NOT NULL,
                         Status INTEGER NOT NULL DEFAULT 0,
+                        DataSourceId INTEGER,
+                        DataSourceName TEXT,
                         FileSizeBytes INTEGER NOT NULL,
                         CreatedAt TEXT NOT NULL,
                         LastAttemptAt TEXT,
@@ -306,7 +311,8 @@ namespace FileMonitorWorkerService.Data
                     );
                     CREATE INDEX IF NOT EXISTS IX_UploadQueue_Status ON UploadQueues(Status);
                     CREATE INDEX IF NOT EXISTS IX_UploadQueue_CreatedAt ON UploadQueues(CreatedAt);
-                    CREATE INDEX IF NOT EXISTS IX_UploadQueue_Hash ON UploadQueues(Hash);",
+                    CREATE INDEX IF NOT EXISTS IX_UploadQueue_Hash ON UploadQueues(Hash);
+                    CREATE INDEX IF NOT EXISTS IX_UploadQueue_DataSourceId ON UploadQueues(DataSourceId);",
                 "WatcherErrors" => @"
                     CREATE TABLE IF NOT EXISTS WatcherErrors (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -324,6 +330,73 @@ namespace FileMonitorWorkerService.Data
                     )",
                 _ => throw new ArgumentException($"Unknown table name: {tableName}")
             };
+        }
+
+        /// <summary>
+        /// Applies schema updates to existing tables (for database migration)
+        /// </summary>
+        private static async Task ApplySchemaUpdatesAsync(AppDbContext context, ILogger logger)
+        {
+            try
+            {
+                logger.LogInformation("Checking for schema updates...");
+
+                using var connection = context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                // Check if DataSourceId and DataSourceName columns exist in UploadQueues
+                var checkColumnCommand = connection.CreateCommand();
+                checkColumnCommand.CommandText = "PRAGMA table_info(UploadQueues)";
+                
+                var columns = new List<string>();
+                using (var reader = await checkColumnCommand.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        columns.Add(reader.GetString(1)); // Column name is at index 1
+                    }
+                }
+
+                // Add DataSourceId column if it doesn't exist
+                if (!columns.Contains("DataSourceId", StringComparer.OrdinalIgnoreCase))
+                {
+                    logger.LogInformation("Adding DataSourceId column to UploadQueues table...");
+                    var addColumnCommand = connection.CreateCommand();
+                    addColumnCommand.CommandText = "ALTER TABLE UploadQueues ADD COLUMN DataSourceId INTEGER";
+                    await addColumnCommand.ExecuteNonQueryAsync();
+                    logger.LogInformation("DataSourceId column added successfully");
+                }
+                else
+                {
+                    logger.LogDebug("DataSourceId column already exists");
+                }
+
+                // Add DataSourceName column if it doesn't exist
+                if (!columns.Contains("DataSourceName", StringComparer.OrdinalIgnoreCase))
+                {
+                    logger.LogInformation("Adding DataSourceName column to UploadQueues table...");
+                    var addColumnCommand = connection.CreateCommand();
+                    addColumnCommand.CommandText = "ALTER TABLE UploadQueues ADD COLUMN DataSourceName TEXT";
+                    await addColumnCommand.ExecuteNonQueryAsync();
+                    logger.LogInformation("DataSourceName column added successfully");
+                }
+                else
+                {
+                    logger.LogDebug("DataSourceName column already exists");
+                }
+
+                // Create index on DataSourceId if it doesn't exist
+                var indexCommand = connection.CreateCommand();
+                indexCommand.CommandText = "CREATE INDEX IF NOT EXISTS IX_UploadQueue_DataSourceId ON UploadQueues(DataSourceId)";
+                await indexCommand.ExecuteNonQueryAsync();
+
+                logger.LogInformation("Schema updates applied successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error applying schema updates");
+                // Don't throw - let the app continue even if migration fails
+            }
         }
 
         private static async Task LogDatabaseStatisticsAsync(AppDbContext context, ILogger logger)

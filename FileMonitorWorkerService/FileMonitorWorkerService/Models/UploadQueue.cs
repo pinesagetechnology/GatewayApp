@@ -19,6 +19,12 @@ namespace FileMonitorWorkerService.Models
 
         public FileStatus Status { get; set; } = FileStatus.Pending;
 
+        // Data source information for categorization
+        public int? DataSourceId { get; set; }
+
+        [StringLength(100)]
+        public string? DataSourceName { get; set; }
+
         public long FileSizeBytes { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

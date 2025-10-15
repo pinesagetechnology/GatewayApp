@@ -10,8 +10,8 @@ namespace FileMonitorWorkerService.Services
     public interface IAzureStorageService
     {
         Task<bool> IsConnectedAsync();
-        Task<UploadResult> UploadFileAsync(string filePath, string containerName, string? blobName = null, IProgress<AzureUploadProgress>? progress = null);
-        Task<UploadResult> UploadDataAsync(byte[] data, string fileName, string containerName, string? blobName = null);
+        Task<UploadResult> UploadFileAsync(string filePath, string containerName, string? blobName = null, IProgress<AzureUploadProgress>? progress = null, string? dataSourceName = null);
+        Task<UploadResult> UploadDataAsync(byte[] data, string fileName, string containerName, string? blobName = null, string? dataSourceName = null);
         Task<bool> BlobExistsAsync(string containerName, string blobName);
         Task<bool> DeleteBlobAsync(string containerName, string blobName);
         Task<IEnumerable<string>> ListBlobsAsync(string containerName, string? prefix = null);
@@ -95,7 +95,7 @@ namespace FileMonitorWorkerService.Services
             }
         }
 
-        public async Task<UploadResult> UploadFileAsync(string filePath, string containerName, string? blobName = null, IProgress<AzureUploadProgress>? progress = null)
+        public async Task<UploadResult> UploadFileAsync(string filePath, string containerName, string? blobName = null, IProgress<AzureUploadProgress>? progress = null, string? dataSourceName = null)
         {
             var stopwatch = Stopwatch.StartNew();
             var result = new UploadResult();
@@ -124,7 +124,7 @@ namespace FileMonitorWorkerService.Services
                 await CreateContainerIfNotExistsAsync(containerName);
 
                 // Generate blob name if not provided
-                blobName ??= GenerateBlobName(Path.GetFileName(filePath));
+                blobName ??= GenerateBlobName(Path.GetFileName(filePath), dataSourceName);
                 _logger.LogDebug("Using blob name: {BlobName}", blobName);
 
                 var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
@@ -208,7 +208,7 @@ namespace FileMonitorWorkerService.Services
             }
         }
 
-        public async Task<UploadResult> UploadDataAsync(byte[] data, string fileName, string containerName, string? blobName = null)
+        public async Task<UploadResult> UploadDataAsync(byte[] data, string fileName, string containerName, string? blobName = null, string? dataSourceName = null)
         {
             var stopwatch = Stopwatch.StartNew();
             var result = new UploadResult();
@@ -231,7 +231,7 @@ namespace FileMonitorWorkerService.Services
                 await CreateContainerIfNotExistsAsync(containerName);
 
                 // Generate blob name if not provided
-                blobName ??= GenerateBlobName(fileName);
+                blobName ??= GenerateBlobName(fileName, dataSourceName);
                 _logger.LogDebug("Using blob name: {BlobName}", blobName);
 
                 var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
@@ -439,12 +439,26 @@ namespace FileMonitorWorkerService.Services
             }
         }
 
-        private static string GenerateBlobName(string fileName)
+        private static string GenerateBlobName(string fileName, string? dataSourceName = null)
         {
-            var timestamp = DateTime.UtcNow.ToString("yyyy/MM/dd/HH");
-            var uniqueId = Guid.NewGuid().ToString("N")[..8];
+            // New structure: [DataSourceName]/[YYYYMMDD]/[DataSourceName]_[YYYYMMDD]_[HHMMSS]_[FileName]
+            var now = DateTime.UtcNow;
+            var dateFolder = now.ToString("yyyyMMdd"); // Compact date format
+            var timestamp = now.ToString("yyyyMMdd_HHmmss");
             var safeFileName = fileName.Replace(" ", "_");
-            return $"{timestamp}/{uniqueId}_{safeFileName}";
+            
+            if (!string.IsNullOrEmpty(dataSourceName))
+            {
+                var safeDataSourceName = dataSourceName.Replace(" ", "-").ToLowerInvariant();
+                // Structure: datasource/20250115/datasource_20250115_103045_filename.ext
+                return $"{safeDataSourceName}/{dateFolder}/{safeDataSourceName}_{timestamp}_{safeFileName}";
+            }
+            else
+            {
+                // Fallback for files without data source (legacy support)
+                var uniqueId = Guid.NewGuid().ToString("N")[..8];
+                return $"uncategorized/{dateFolder}/{uniqueId}_{timestamp}_{safeFileName}";
+            }
         }
 
         private static string GetContentType(string fileExtension)

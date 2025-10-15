@@ -65,14 +65,15 @@ namespace FileMonitorWorkerService.Services
                     return await MarkAsFailedAsync(item, "Missing Azure Storage connection string");
                 }
 
-                var blobName = item.AzureBlobName ?? FileHelper.GetSafeFileName(item.FileName);
+                var blobName = item.AzureBlobName; // null is fine, will be auto-generated with data source info
 
                 var progress = new Progress<AzureUploadProgress>(p =>
                 {
                     _logger.LogDebug("Uploading {File}: {Uploaded}/{Total} bytes - {Status}", item.FileName, p.BytesUploaded, p.TotalBytes, p.StatusMessage);
                 });
 
-                var uploadResult = await _azureStorageService.UploadFileAsync(item.FilePath, container, blobName, progress);
+                // Pass data source name for categorized uploads
+                var uploadResult = await _azureStorageService.UploadFileAsync(item.FilePath, container, blobName, progress, item.DataSourceName);
                 var uploaded = uploadResult.IsSuccess;
                 if (!uploaded)
                 {
