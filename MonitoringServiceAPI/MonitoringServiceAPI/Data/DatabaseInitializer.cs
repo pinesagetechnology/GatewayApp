@@ -32,6 +32,9 @@ namespace MonitoringServiceAPI.Data
                 // Seed PushServerSetting if it doesn't exist
                 await SeedPushServerSettingAsync(context, configuration, logger);
 
+                // Seed GpsServerSetting if it doesn't exist
+                await SeedGpsServerSettingAsync(context, configuration, logger);
+
                 await LogDatabaseStatisticsAsync(context, logger);
 
                 logger.LogInformation("=== Database Initialization Complete ===");
@@ -80,7 +83,8 @@ namespace MonitoringServiceAPI.Data
                     "FileDataSourceConfigs",
                     "UploadQueues",
                     "FileMonitorServiceHeartBeats",
-                    "PushServerSettings"
+                    "PushServerSettings",
+                    "GpsServerSettings"
                 };
 
                 var existingTables = await GetTableNamesAsync(context);
@@ -207,6 +211,12 @@ namespace MonitoringServiceAPI.Data
                         UpdatedAt TEXT NOT NULL,
                         UpdatedBy TEXT
                     )",
+                "GpsServerSettings" => @"
+                    CREATE TABLE IF NOT EXISTS GpsServerSettings (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        IsEnabled INTEGER NOT NULL DEFAULT 0,
+                        DataFolderPath TEXT NOT NULL
+                    )",
                 _ => throw new ArgumentException($"Unknown table name: {tableName}")
             };
         }
@@ -251,6 +261,44 @@ namespace MonitoringServiceAPI.Data
             }
         }
 
+        private static async Task SeedGpsServerSettingAsync(AppDbContext context, IConfiguration configuration, ILogger logger)
+        {
+            try
+            {
+                logger.LogInformation("Checking GpsServerSetting...");
+
+                var existingSetting = await context.GpsServerSettings.FirstOrDefaultAsync();
+
+                if (existingSetting == null)
+                {
+                    logger.LogInformation("No GpsServerSetting found, creating default...");
+
+                    // Get the default path from appsettings.json or use a default
+                    var defaultDataFolderPath = configuration["GpsStorage:DataFolderPath"] ?? "C:\\Data\\GpsData";
+
+                    var defaultSetting = new GpsServerSetting
+                    {
+                        IsEnabled = false,
+                        DataFolderPath = defaultDataFolderPath
+                    };
+
+                    await context.GpsServerSettings.AddAsync(defaultSetting);
+                    await context.SaveChangesAsync();
+
+                    logger.LogInformation("Successfully created default GpsServerSetting with path: {Path}", defaultDataFolderPath);
+                }
+                else
+                {
+                    logger.LogInformation("GpsServerSetting already exists (IsEnabled: {IsEnabled}, Path: {Path})",
+                        existingSetting.IsEnabled, existingSetting.DataFolderPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error seeding GpsServerSetting");
+            }
+        }
+
         private static async Task LogDatabaseStatisticsAsync(AppDbContext context, ILogger logger)
         {
             try
@@ -260,9 +308,10 @@ namespace MonitoringServiceAPI.Data
                 var queueCount = await context.UploadQueues.CountAsync();
                 var heartbeatCount = await context.FileMonitorServiceHeartBeats.CountAsync();
                 var pushServerCount = await context.PushServerSettings.CountAsync();
+                var gpsServerCount = await context.GpsServerSettings.CountAsync();
 
-                logger.LogInformation("DB Stats -> Configurations: {Configs}, DataSources: {Sources}, UploadQueue: {Queue}, HeartBeats: {HeartBeats}, PushServerSettings: {PushSettings}",
-                    configCount, sourceCount, queueCount, heartbeatCount, pushServerCount);
+                logger.LogInformation("DB Stats -> Configurations: {Configs}, DataSources: {Sources}, UploadQueue: {Queue}, HeartBeats: {HeartBeats}, PushServerSettings: {PushSettings}, GpsServerSettings: {GpsSettings}",
+                    configCount, sourceCount, queueCount, heartbeatCount, pushServerCount, gpsServerCount);
             }
             catch (Exception ex)
             {

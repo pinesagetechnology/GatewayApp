@@ -26,6 +26,10 @@ namespace MonitoringServiceAPI.Services
             services.AddTransient<IPushServerSettingService, PushServerSettingService>();
             services.AddTransient<IVivotekService, VivotekService>();
 
+            // GPS server services
+            services.AddTransient<IGpsServerSettingService, GpsServerSettingService>();
+            services.AddTransient<IGpsService, GpsService>();
+
             return services;
         }
     }

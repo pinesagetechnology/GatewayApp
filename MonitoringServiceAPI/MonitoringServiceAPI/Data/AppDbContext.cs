@@ -19,6 +19,8 @@ namespace MonitoringServiceAPI.Data
 
         public DbSet<PushServerSetting> PushServerSettings { get; set; }
 
+        public DbSet<GpsServerSetting> GpsServerSettings { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
