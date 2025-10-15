@@ -4,6 +4,7 @@ import { AzureStorageInfo } from '@/models/AzureStorageInfo';
 import { QueueItem, QueueSummary } from '@/models/UploadProcessor';
 import { Heartbeat } from '@/models/Heartbeat';
 import { PushServerSetting, UpdatePushServerSettingRequest, EnableServiceRequest, DisableServiceRequest } from '@/models/PushServerSetting';
+import { GpsServerSetting, UpdateGpsServerSettingRequest } from '@/models/GpsServerSetting';
 import axios, { AxiosResponse } from 'axios';
 import { CreateDataSourceRequest, UpdateDataSourceRequest, SetConfigRequest } from '@/models/Requests';
 import { ApiError } from '@/models/ApiError';
@@ -140,6 +141,16 @@ export const apiService = {
         apiClient.patch('/api/PushServerSetting/enable', data || {}),
     disablePushServer: (data?: DisableServiceRequest): Promise<AxiosResponse<PushServerSetting>> =>
         apiClient.patch('/api/PushServerSetting/disable', data || {}),
+
+    // GPS Server Settings endpoints
+    getGpsServerSetting: (): Promise<AxiosResponse<GpsServerSetting>> =>
+        apiClient.get('/api/GpsServerSetting'),
+    updateGpsServerSetting: (data: UpdateGpsServerSettingRequest): Promise<AxiosResponse<GpsServerSetting>> =>
+        apiClient.put('/api/GpsServerSetting', data),
+    enableGpsServer: (): Promise<AxiosResponse<GpsServerSetting>> =>
+        apiClient.patch('/api/GpsServerSetting/enable'),
+    disableGpsServer: (): Promise<AxiosResponse<GpsServerSetting>> =>
+        apiClient.patch('/api/GpsServerSetting/disable'),
 };
 
 // Utility functions for API responses

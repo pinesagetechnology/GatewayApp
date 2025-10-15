@@ -15,6 +15,7 @@ import {
     SyncOutlined,
     ApiOutlined,
     SendOutlined,
+    EnvironmentOutlined,
 } from '@ant-design/icons';
 import SystemStatusIndicator from '../common/SystemStatusIndicator';
 
@@ -56,6 +57,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             key: '/push-server',
             icon: <SendOutlined />,
             label: 'Push Server',
+        },
+        {
+            key: '/gps-server',
+            icon: <EnvironmentOutlined />,
+            label: 'GPS Server',
         },
         {
             key: '/upload-processor',

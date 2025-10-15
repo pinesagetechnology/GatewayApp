@@ -9,6 +9,7 @@ import AzureStorage from './pages/AzureStorage';
 import UploadProcessor from './pages/UploadProcessor';
 import Settings from './pages/Settings';
 import PushServerSetting from './pages/PushServerSetting';
+import GpsServerSetting from './pages/GpsServerSetting';
 import { NotificationProvider } from './contexts/NotificationContext';
 import 'antd/dist/reset.css';
 import './App.css';
@@ -33,6 +34,7 @@ const App: React.FC = () => {
                             <Route path="/data-sources" element={<DataSources />} />
                             <Route path="/api-data-sources" element={<APIDataSources />} />
                             <Route path="/push-server" element={<PushServerSetting />} />
+                            <Route path="/gps-server" element={<GpsServerSetting />} />
                             <Route path="/azure-storage" element={<AzureStorage />} />
                             <Route path="/upload-processor" element={<UploadProcessor />} />
                             <Route path="/settings" element={<Settings />} />
