@@ -296,6 +296,48 @@ After setup, verify:
 
 ---
 
+## 🔙 Going Back to Normal Mode
+
+Need to exit kiosk mode? You have several options:
+
+### Temporary Exit (For Maintenance)
+```bash
+# Stop kiosk temporarily
+sudo systemctl stop kiosk.service
+
+# Do your work...
+
+# Restart kiosk
+sudo systemctl start kiosk.service
+```
+
+### Disable Auto-Start (Keep Configuration)
+```bash
+# Disable auto-start on boot
+sudo systemctl disable kiosk.service
+sudo systemctl stop kiosk.service
+
+# Re-enable later if needed
+sudo systemctl enable kiosk.service
+```
+
+### Complete Removal (Back to Normal Desktop)
+```bash
+# Remove all kiosk configuration
+sudo bash scripts/remove-kiosk.sh
+
+# Follow the prompts, then reboot
+sudo reboot
+```
+
+### Emergency Access
+If you're locked in the kiosk and need terminal access:
+- **Option A**: SSH from another computer: `ssh pi@<raspberry-pi-ip>`
+- **Option B**: Press `Ctrl+Alt+F2` (switch to terminal), then `Ctrl+Alt+F7` (back to GUI)
+- **Option C**: Use the emergency exit: `sudo /usr/local/bin/exit-kiosk`
+
+---
+
 ## 🎉 You're Done!
 
 Your Raspberry Pi is now a dedicated kiosk display for your React app!

@@ -567,7 +567,26 @@ sudo tar -xzf kiosk-backup-20240101.tar.gz -C /
 sudo systemctl daemon-reload
 ```
 
-### Factory Reset
+### Factory Reset (Complete Removal)
+
+Use the automated removal script for clean uninstallation:
+
+```bash
+# Run the removal script
+sudo bash scripts/remove-kiosk.sh
+
+# This will:
+# - Stop and remove all kiosk services
+# - Remove configuration files
+# - Optionally remove autologin
+# - Clean up helper scripts
+# - Keep your app files intact
+
+# Follow the prompts, then reboot
+sudo reboot
+```
+
+Or manually remove components:
 
 ```bash
 # Remove all kiosk components
@@ -575,7 +594,6 @@ sudo systemctl stop kiosk.service
 sudo systemctl disable kiosk.service
 sudo rm /etc/systemd/system/kiosk.service
 sudo rm /home/pi/start-kiosk.sh
-sudo rm -rf /opt/react-ui-app
 sudo systemctl daemon-reload
 
 # Remove autologin
