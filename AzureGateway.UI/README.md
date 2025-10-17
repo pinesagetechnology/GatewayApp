@@ -141,6 +141,44 @@ Run `npm run lint:fix` to automatically fix most ESLint issues.
 ### Build Issues
 Check that all dependencies are installed: `npm install`
 
+## 🖥️ Kiosk Mode Deployment (Raspberry Pi)
+
+Transform this app into a full-screen kiosk display for Raspberry Pi or IoT devices!
+
+### Quick Setup
+
+**Option 1: Chromium Kiosk** (Lightweight, 5 minutes)
+```bash
+# After deploying the app
+sudo bash scripts/kiosk-chromium-setup.sh
+sudo reboot
+```
+
+**Option 2: Electron Kiosk** (Full desktop app, 15 minutes)
+```bash
+bash scripts/kiosk-electron-setup.sh
+npm run electron:build
+sudo reboot
+```
+
+### Features
+- ✅ Auto-start on boot with full-screen display
+- ✅ Disabled keyboard shortcuts and screen saver
+- ✅ Auto-restart on crash with watchdog
+- ✅ Remote management via SSH
+- ✅ Easy app updates
+
+### Documentation
+- **Quick Start**: See `KIOSK_QUICKSTART.md` for fast setup
+- **Full Guide**: See `KIOSK_SETUP_GUIDE.md` for comprehensive documentation
+- **Deployment**: Use `scripts/rpi5-deploy.sh` to deploy the app first
+
+### Deployment Scripts
+- `scripts/rpi5-deploy.sh` - Deploy React app on Raspberry Pi 5
+- `scripts/kiosk-chromium-setup.sh` - Set up Chromium-based kiosk mode
+- `scripts/kiosk-electron-setup.sh` - Set up Electron-based kiosk mode
+- `scripts/jetson-deploy.sh` - Deploy on NVIDIA Jetson devices
+
 ## 📚 Learning Resources
 
 - [Webpack Documentation](https://webpack.js.org/)
