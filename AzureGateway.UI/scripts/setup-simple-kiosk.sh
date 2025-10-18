@@ -61,9 +61,31 @@ step "1. Installing required packages..."
 # ============================================================================
 
 apt update
-apt install -y chromium-browser unclutter xdotool
+apt install -y unclutter xdotool
 
-log "Packages installed"
+# Install Chromium - try both package names (modern Raspberry Pi uses 'chromium', older versions use 'chromium-browser')
+if ! command -v chromium &>/dev/null && ! command -v chromium-browser &>/dev/null; then
+    if apt-cache show chromium &>/dev/null; then
+        apt install -y chromium || warn "Failed to install chromium, trying chromium-browser"
+    fi
+    if ! command -v chromium &>/dev/null; then
+        apt install -y chromium-browser || warn "Failed to install chromium-browser"
+    fi
+else
+    log "Chromium already installed"
+fi
+
+# Detect which chromium command is available
+if command -v chromium &>/dev/null; then
+    CHROMIUM_CMD="chromium"
+elif command -v chromium-browser &>/dev/null; then
+    CHROMIUM_CMD="chromium-browser"
+else
+    err "Chromium not found after installation"
+    exit 1
+fi
+
+log "Packages installed (using $CHROMIUM_CMD)"
 
 # ============================================================================
 step "2. Removing old kiosk configurations..."
@@ -196,11 +218,11 @@ X-GNOME-Autostart-enabled=true
 EOF
 
 # Create kiosk startup script
-cat > "${KIOSK_HOME}/.config/autostart/kiosk.desktop" <<'EOF'
+cat > "${KIOSK_HOME}/.config/autostart/kiosk.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Kiosk Browser
-Exec=/bin/bash -c "sleep 5 && chromium-browser --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --disable-translate --disable-features=TranslateUI --check-for-update-interval=31536000 http://localhost"
+Exec=/bin/bash -c "sleep 5 && $CHROMIUM_CMD --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --no-first-run --disable-translate --disable-features=TranslateUI --check-for-update-interval=31536000 http://localhost"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true

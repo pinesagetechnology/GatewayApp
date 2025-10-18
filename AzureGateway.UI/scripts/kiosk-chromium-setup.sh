@@ -63,7 +63,6 @@ install_packages() {
     
     apt update
     apt install -y \
-        chromium-browser \
         xorg \
         x11-xserver-utils \
         xinit \
@@ -71,7 +70,28 @@ install_packages() {
         sed \
         matchbox-window-manager
     
-    log "Packages installed successfully"
+    # Install Chromium - try both package names (modern Raspberry Pi uses 'chromium', older versions use 'chromium-browser')
+    if ! command -v chromium &>/dev/null && ! command -v chromium-browser &>/dev/null; then
+        if apt-cache show chromium &>/dev/null; then
+            apt install -y chromium || warn "Failed to install chromium, trying chromium-browser"
+        fi
+        if ! command -v chromium &>/dev/null; then
+            apt install -y chromium-browser || warn "Failed to install chromium-browser"
+        fi
+    else
+        log "Chromium already installed"
+    fi
+    
+    # Detect which chromium command is available
+    if command -v chromium &>/dev/null; then
+        CHROMIUM_CMD="chromium"
+    elif command -v chromium-browser &>/dev/null; then
+        CHROMIUM_CMD="chromium-browser"
+    else
+        error "Chromium not found after installation"
+    fi
+    
+    log "Packages installed successfully (using $CHROMIUM_CMD)"
 }
 
 # Disable screen blanking and power management
@@ -100,7 +120,17 @@ EOF
 create_kiosk_script() {
     log "Creating kiosk startup script..."
     
-    cat > "${KIOSK_HOME}/start-kiosk.sh" <<'EOF'
+    # Detect which chromium command to use in the script
+    local SCRIPT_CHROMIUM_CMD
+    if command -v chromium &>/dev/null; then
+        SCRIPT_CHROMIUM_CMD="chromium"
+    elif command -v chromium-browser &>/dev/null; then
+        SCRIPT_CHROMIUM_CMD="chromium-browser"
+    else
+        SCRIPT_CHROMIUM_CMD="$CHROMIUM_CMD"  # Use the one we detected earlier
+    fi
+    
+    cat > "${KIOSK_HOME}/start-kiosk.sh" <<EOF
 #!/bin/bash
 
 # Disable screen blanking
@@ -112,25 +142,25 @@ xset -dpms
 unclutter -idle 0.1 -root &
 
 # Remove any crash recovery dialogs
-sed -i 's/"exited_cleanly":false/"exited_cleanly":true/' "${HOME}/.config/chromium/Default/Preferences" 2>/dev/null || true
-sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' "${HOME}/.config/chromium/Default/Preferences" 2>/dev/null || true
+sed -i 's/"exited_cleanly":false/"exited_cleanly":true/' "\${HOME}/.config/chromium/Default/Preferences" 2>/dev/null || true
+sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' "\${HOME}/.config/chromium/Default/Preferences" 2>/dev/null || true
 
 # Start Chromium in kiosk mode
-chromium-browser \
-    --kiosk \
-    --noerrdialogs \
-    --disable-infobars \
-    --disable-session-crashed-bubble \
-    --disable-translate \
-    --no-first-run \
-    --fast \
-    --fast-start \
-    --disable-features=TranslateUI \
-    --disk-cache-dir=/tmp/cache \
-    --overscroll-history-navigation=0 \
-    --disable-pinch \
-    --check-for-update-interval=31536000 \
-    --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \
+$SCRIPT_CHROMIUM_CMD \\
+    --kiosk \\
+    --noerrdialogs \\
+    --disable-infobars \\
+    --disable-session-crashed-bubble \\
+    --disable-translate \\
+    --no-first-run \\
+    --fast \\
+    --fast-start \\
+    --disable-features=TranslateUI \\
+    --disk-cache-dir=/tmp/cache \\
+    --overscroll-history-navigation=0 \\
+    --disable-pinch \\
+    --check-for-update-interval=31536000 \\
+    --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' \\
     http://localhost
 EOF
     
@@ -242,9 +272,10 @@ create_emergency_exit() {
     cat > /usr/local/bin/exit-kiosk <<'EOF'
 #!/bin/bash
 # Emergency script to exit kiosk mode
-# Usage: sudo systemctl stop kiosk.service && sudo killall chromium-browser
+# Usage: sudo systemctl stop kiosk.service
 
 systemctl stop kiosk.service
+killall chromium 2>/dev/null || true
 killall chromium-browser 2>/dev/null || true
 killall X 2>/dev/null || true
 
@@ -267,8 +298,8 @@ create_watchdog() {
 while true; do
     sleep 30
     
-    # Check if Chromium is running
-    if ! pgrep -x chromium-browser > /dev/null; then
+    # Check if Chromium is running (check for both process names)
+    if ! pgrep -x chromium > /dev/null && ! pgrep -x chromium-browser > /dev/null; then
         logger "Kiosk watchdog: Chromium not running, restarting kiosk service"
         systemctl restart kiosk.service
     fi

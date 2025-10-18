@@ -60,9 +60,31 @@ step "1. System Update & Package Installation"
 # ============================================================================
 
 apt update
-apt install -y curl wget git nginx chromium-browser unclutter xdotool
+apt install -y curl wget git nginx unclutter xdotool
 
-log "System packages installed"
+# Install Chromium - try both package names (modern Raspberry Pi uses 'chromium', older versions use 'chromium-browser')
+if ! command -v chromium &>/dev/null && ! command -v chromium-browser &>/dev/null; then
+    if apt-cache show chromium &>/dev/null; then
+        apt install -y chromium || warn "Failed to install chromium, trying chromium-browser"
+    fi
+    if ! command -v chromium &>/dev/null; then
+        apt install -y chromium-browser || warn "Failed to install chromium-browser"
+    fi
+else
+    log "Chromium already installed"
+fi
+
+# Detect which chromium command is available
+if command -v chromium &>/dev/null; then
+    CHROMIUM_CMD="chromium"
+elif command -v chromium-browser &>/dev/null; then
+    CHROMIUM_CMD="chromium-browser"
+else
+    err "Chromium not found after installation"
+    exit 1
+fi
+
+log "System packages installed (using $CHROMIUM_CMD)"
 
 # ============================================================================
 step "2. Install Node.js"
@@ -295,11 +317,11 @@ X-GNOME-Autostart-enabled=true
 EOF
 
 # Kiosk browser with tested flags
-cat > "${USER_HOME}/.config/autostart/kiosk.desktop" <<'EOF'
+cat > "${USER_HOME}/.config/autostart/kiosk.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Kiosk Browser
-Exec=/bin/bash -c "sleep 15 && chromium-browser --kiosk --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --no-sandbox --noerrdialogs --disable-infobars --no-first-run --disable-translate --disable-features=TranslateUI http://localhost"
+Exec=/bin/bash -c "sleep 15 && $CHROMIUM_CMD --kiosk --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --no-sandbox --noerrdialogs --disable-infobars --no-first-run --disable-translate --disable-features=TranslateUI http://localhost"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
@@ -324,12 +346,12 @@ EOF
 chmod +x /usr/local/bin/exit-kiosk
 
 # Restart kiosk
-cat > /usr/local/bin/restart-kiosk <<'EOF'
+cat > /usr/local/bin/restart-kiosk <<EOF
 #!/bin/bash
 killall chromium 2>/dev/null || true
 killall chromium-browser 2>/dev/null || true
 sleep 2
-DISPLAY=:0 chromium-browser --kiosk --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --no-sandbox --noerrdialogs --disable-infobars --no-first-run http://localhost &
+DISPLAY=:0 $CHROMIUM_CMD --kiosk --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --no-sandbox --noerrdialogs --disable-infobars --no-first-run http://localhost &
 echo "Kiosk restarted"
 EOF
 chmod +x /usr/local/bin/restart-kiosk
