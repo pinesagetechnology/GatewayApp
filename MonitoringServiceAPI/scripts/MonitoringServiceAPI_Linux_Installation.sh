@@ -71,7 +71,15 @@ validate_paths() {
 install_packages() {
   step "Installing prerequisites…"
   case $DISTRO in
-    ubuntu|debian) apt-get update; apt-get install -y curl wget gpg software-properties-common apt-transport-https nginx;;
+    ubuntu|debian|raspbian)
+      apt-get update
+      # Install core packages first
+      apt-get install -y curl wget gpg apt-transport-https nginx || { err "Failed to install core packages"; exit 1; }
+      # Try to install software-properties-common, but don't fail if not available (Raspberry Pi OS/Raspbian may not have this package)
+      if apt-cache show software-properties-common &>/dev/null; then
+        apt-get install -y software-properties-common || warn "software-properties-common not installed (not critical)"
+      fi
+      ;;
     *) warn "Non-Debian distro detected. Ensure curl/wget/gpg/nginx installed.";;
   esac
 }

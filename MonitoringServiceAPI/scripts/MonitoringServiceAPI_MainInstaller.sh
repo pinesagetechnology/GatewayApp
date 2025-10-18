@@ -144,9 +144,18 @@ install_prerequisites() {
   step "Installing system prerequisites..."
   
   case $DISTRO in
-    ubuntu|debian)
+    ubuntu|debian|raspbian)
       apt-get update
-      apt-get install -y curl wget gpg software-properties-common apt-transport-https nginx unzip
+      # Install core packages first
+      apt-get install -y curl wget gpg apt-transport-https nginx unzip || {
+        err "Failed to install core packages"
+        exit 1
+      }
+      # Try to install software-properties-common, but don't fail if not available
+      # (Raspberry Pi OS/Raspbian may not have this package)
+      if apt-cache show software-properties-common &>/dev/null; then
+        apt-get install -y software-properties-common || warn "software-properties-common not installed (not critical)"
+      fi
       ;;
     centos|rhel|fedora)
       if command -v dnf >/dev/null 2>&1; then

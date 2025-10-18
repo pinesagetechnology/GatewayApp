@@ -187,9 +187,20 @@ install_packages() {
     log_step "Installing required packages..."
     
     case $DISTRO in
-        ubuntu|debian)
+        ubuntu|debian|raspbian)
             apt-get update
-            apt-get install -y curl wget gpg software-properties-common apt-transport-https
+            # Install core packages first
+            apt-get install -y curl wget gpg apt-transport-https || {
+                log_error "Failed to install core packages"
+                exit 1
+            }
+            # Try to install software-properties-common, but don't fail if not available
+            # (Raspberry Pi OS/Raspbian may not have this package)
+            if apt-cache show software-properties-common &>/dev/null; then
+                apt-get install -y software-properties-common || log_warn "software-properties-common not installed (not critical)"
+            else
+                verbose_log "software-properties-common not available on this distribution (not needed for Raspberry Pi)"
+            fi
             ;;
         centos|rhel|fedora)
             if command -v dnf &> /dev/null; then
