@@ -691,27 +691,32 @@ EOF
     echo ""
 }
 
-# Step 9: Deploy React app
+# Step 9: Deploy React app with Kiosk Mode
 deploy_react_app() {
     if [ "$SKIP_REACT" = true ]; then
         return 0
     fi
     
-    header "Step 9: Deploying React App"
+    header "Step 9: Deploying React App with Kiosk Mode"
     
-    # Look for the React deployment script in AzureGateway.UI/scripts directory
-    local deploy_script="$WORKSPACE_BASE/AzureGateway.UI/scripts/rpi5-deploy.sh"
+    # Look for the kiosk deployment script
+    local deploy_script="$WORKSPACE_BASE/AzureGateway.UI/scripts/deploy-kiosk-complete.sh"
     
     if [ ! -f "$deploy_script" ]; then
         # Fallback to script directory
-        deploy_script="$SCRIPT_DIR/AzureGateway.UI/scripts/rpi5-deploy.sh"
+        deploy_script="$SCRIPT_DIR/AzureGateway.UI/scripts/deploy-kiosk-complete.sh"
     fi
     
     if [ ! -f "$deploy_script" ]; then
-        warn "React deployment script not found: $deploy_script"
-        warn "Expected location: $WORKSPACE_BASE/AzureGateway.UI/scripts/rpi5-deploy.sh"
-        warn "Skipping React app deployment"
-        return 0
+        warn "Kiosk deployment script not found: $deploy_script"
+        warn "Falling back to standard React deployment..."
+        # Fallback to old script
+        deploy_script="$WORKSPACE_BASE/AzureGateway.UI/scripts/rpi5-deploy.sh"
+        if [ ! -f "$deploy_script" ]; then
+            warn "React deployment script not found"
+            warn "Skipping React app deployment"
+            return 0
+        fi
     fi
     
     # Get the React app directory (parent of scripts folder)
@@ -724,25 +729,16 @@ deploy_react_app() {
     fi
     
     info "React app directory: $react_app_dir"
+    info "Using deployment script: $deploy_script"
     
-    # React deployment script should NOT be run as root - run as original user
-    if [ "$EUID" -eq 0 ]; then
-        ORIGINAL_USER="${SUDO_USER:-$(logname 2>/dev/null || echo $USER)}"
-        if [ -n "$ORIGINAL_USER" ] && [ "$ORIGINAL_USER" != "root" ]; then
-            info "Running React deployment as user: $ORIGINAL_USER"
-            # Run the script with full path - the script will handle changing to project root
-            execute_command "sudo -u $ORIGINAL_USER bash \"$deploy_script\"" "Deploy React app" || {
-                warn "React app deployment had issues, but continuing..."
-            }
-        else
-            warn "React deployment requires non-root execution"
-            warn "Please deploy React app manually: bash $deploy_script"
-        fi
-    else
-        execute_command "bash \"$deploy_script\"" "Deploy React app" || {
-            warn "React app deployment had issues, but continuing..."
-        }
-    fi
+    # Kiosk deployment script MUST be run as root (it uses sudo internally)
+    execute_command "bash \"$deploy_script\"" "Deploy React app with kiosk mode" || {
+        warn "React app deployment had issues, but continuing..."
+    }
+    
+    echo ""
+    info "React app deployed with kiosk mode enabled"
+    info "After reboot, the app will display in full-screen kiosk mode"
 }
 
 # ============================================================================
