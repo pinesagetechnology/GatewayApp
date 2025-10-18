@@ -16,8 +16,25 @@ NC='\033[0m' # No Color
 
 # Configuration
 APP_URL="http://localhost"
-KIOSK_USER="${SUDO_USER:-pi}"
+
+# Detect the actual user (not root)
+if [ -n "$SUDO_USER" ]; then
+    KIOSK_USER="$SUDO_USER"
+elif [ "$USER" != "root" ]; then
+    KIOSK_USER="$USER"
+else
+    # Prompt for username if running directly as root
+    read -p "Enter the username for kiosk mode: " KIOSK_USER
+fi
+
 KIOSK_HOME="/home/${KIOSK_USER}"
+
+# Validate user exists
+if ! id "$KIOSK_USER" &>/dev/null; then
+    error "User '$KIOSK_USER' does not exist!"
+fi
+
+log "Configuring kiosk for user: ${KIOSK_USER}"
 
 # Logging functions
 log() {

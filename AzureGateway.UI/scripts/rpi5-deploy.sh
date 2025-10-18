@@ -105,8 +105,7 @@ install_pm2() {
         log "PM2 installed successfully"
     fi
     
-    # Setup PM2 startup script
-    sudo pm2 startup systemd -u $SERVICE_USER --hp /home/$SERVICE_USER
+    log "PM2 installation complete (startup will be configured after app deployment)"
 }
 
 # Create application directory and set permissions
@@ -282,14 +281,22 @@ start_services() {
     fi
     
     # Stop any existing PM2 processes
-    pm2 delete $PM2_APP_NAME 2>/dev/null || true
+    su - $SERVICE_USER -c "pm2 delete $PM2_APP_NAME 2>/dev/null || true"
     
-    # Start the application with PM2
-    pm2 start ecosystem.config.js
-    pm2 save
+    # Start the application with PM2 (as service user, not root)
+    su - $SERVICE_USER -c "cd $APP_DIR && pm2 start ecosystem.config.js && pm2 save"
     
-    # Enable PM2 to start on boot
-    sudo pm2 startup systemd -u $SERVICE_USER --hp /home/$SERVICE_USER
+    # Setup PM2 startup correctly with proper environment
+    log "Configuring PM2 auto-startup..."
+    sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u $SERVICE_USER --hp /home/$SERVICE_USER
+    
+    # Save the process list again as the service user
+    su - $SERVICE_USER -c "pm2 save"
+    
+    # Enable and start the PM2 service
+    sudo systemctl daemon-reload
+    sudo systemctl enable pm2-$SERVICE_USER.service
+    sudo systemctl start pm2-$SERVICE_USER.service
     
     log "Services started successfully"
 }
